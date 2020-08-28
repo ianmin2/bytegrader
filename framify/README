@@ -1,0 +1,13 @@
+EXPECTED PARAMETERS
+
+"command" [The action that you want to perform]
+    Accepted options
+
+        add,count,get,getAll,del,update,truncate,drop,custom
+
+"table"   [The table that you want to perform the action on]
+
+"extras"  [Additional SQL code or an object defining the ]
+    e.g 'LIMIT 10' 
+
+"specifics" [ The specific elements to perform the action on ]
