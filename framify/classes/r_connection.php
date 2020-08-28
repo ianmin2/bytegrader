@@ -68,7 +68,7 @@ class connection
 
         switch (strtolower($this->db_driver)) {
             case 'sqlsrv':
-                $db_connection_string = "{$this->db_driver}:server={$this->db_host},{$this->db_port};Database={$this->db_name};ConnectionPooling=0";
+                $db_connection_string =  @$_ENV["DEBUG"] == "true" ?  "{$this->db_driver}:server={$this->db_host},{$this->db_port};Database={$this->db_name};ConnectionPooling=10;" : "{$this->db_driver}:server={$this->db_host},{$this->db_port};Database={$this->db_name};ConnectionPooling=10;"; //Initial Catalog=${$this->db_name};Integrated Security=SSPI;";
                 break;
 
             default:
@@ -78,7 +78,7 @@ class connection
 
         try {
 
-            $this->con = new PDO($db_connection_string, "$this->db_username", "$this->db_password");
+            $this->con = @$_ENV["DEBUG"] == "true" ?  new PDO($db_connection_string, "$this->db_username", "$this->db_password") : new PDO($db_connection_string, NULL, NULL);
         } catch (PDOException $e) {
 
             echo $this->wrap($this->makeResponse(500, $e->getMessage()));

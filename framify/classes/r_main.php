@@ -22,7 +22,7 @@ error_reporting(@$_ENV["DEBUG"] == "true" ? E_ALL : 0);
 
 date_default_timezone_set("Africa/Nairobi");
 
-//$this_site = "eleanor/concept";
+//$this_site = "eleanor/concept"; 
 
 $db 	= $_ENV['DB'];
 $host 	= $_ENV['DB_HOST'];
