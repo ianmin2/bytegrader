@@ -6,38 +6,37 @@ class DissertationAPI
 
     public function __construct($connection)
     {
-
         $this->c  = $connection;
     }
 
 
     public function getRoutes()
     {
-        return $this->c->printQueryResults("SELECT * FROM routes;");
+        return json_encode($this->c->printQueryResults("SELECT * FROM routes;"));
     }
 
 
     public function getAssignments()
     {
-        return $this->c->printQueryResults("SELECT * FROM assignments;");
+        return json_encode($this->c->printQueryResults("SELECT * FROM assignments;"));
     }
 
 
     public function getUsers()
     {
-
-        return $this->c->printQueryResults("SELECT id,name,email,created_at FROM users;");
+        return json_encode($this->c->printQueryResults("SELECT id,name,email,created_at FROM users;"));
     }
 
 
     public function getChainings()
     {
-        return $this->c->printQueryResults("SELECT * FROM chainings;");
+        return json_encode($this->c->printQueryResults("SELECT * FROM chainings;"));
     }
+
 
     public function getAttempts()
     {
-        return $this->c->printQueryResults("SELECT * FROM attempts;");
+        return json_encode($this->c->printQueryResults("SELECT * FROM attempts;"));
     }
 
 

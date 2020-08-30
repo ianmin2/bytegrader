@@ -88,7 +88,7 @@ if (@$command) {
                     break;
 
                 default:
-                    echo [];
+                    echo "Nadaaaaaaaaa! {$table}";
                     break;
             }
 
