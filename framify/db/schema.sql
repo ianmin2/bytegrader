@@ -5,8 +5,11 @@ CREATE TABLE [dbo].[users](
 	[name] [nvarchar](255) NOT NULL,
 	[email] [nvarchar](255) NOT NULL,
 	[email_verified_at] [datetime] NULL,
+	[username] [nvarchar](50) NOT NULL,
 	[password] [nvarchar](255) NOT NULL,
 	[remember_token] [nvarchar](100) NULL,
+	[user_active] [bit] DEFAULT 1,
+	[user_last_seen] [datetime] DEFAULT GETDATE(),
 	[created_at] [datetime] NULL,
 	[updated_at] [datetime] NULL
 ) ON [PRIMARY];
@@ -18,12 +21,13 @@ ALTER TABLE [dbo].[users] ADD PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY];
 
 
-CREATE UNIQUE NONCLUSTERED INDEX [users_email_unique] ON [dbo].[users]
+CREATE UNIQUE NONCLUSTERED INDEX [user_email_unique] ON [dbo].[users]
 (
 	[email] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY];
 
 
+ALTER TABLE [dbo].[users] ADD DEFAULT  GETDATE() FOR [created_at];
 
 --- #####################################################################################################################
 
@@ -48,6 +52,8 @@ ALTER TABLE [dbo].[assignments] ADD PRIMARY KEY CLUSTERED
 
 
 ALTER TABLE [dbo].[assignments] ADD  DEFAULT (getdate()) FOR [assignment_created];
+ALTER TABLE [dbo].[assignments] ADD DEFAULT  GETDATE() FOR [assignment_created];
+
 
 --- #####################################################################################################################
 
@@ -78,6 +84,7 @@ ALTER TABLE [dbo].[routes] ADD PRIMARY KEY CLUSTERED
 ALTER TABLE [dbo].[routes] ADD  DEFAULT ('GET') FOR [rule_method];
 ALTER TABLE [dbo].[routes] ADD  DEFAULT ('200') FOR [rule_expected_status_code];
 ALTER TABLE [dbo].[routes] ADD  DEFAULT ('text/html') FOR [rule_expected_data_type];
+ALTER TABLE [dbo].[routes] ADD DEFAULT  GETDATE() FOR [created_at];
 
 --- #####################################################################################################################
 
@@ -98,6 +105,7 @@ ALTER TABLE [dbo].[chainings] ADD PRIMARY KEY CLUSTERED
 	[id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY];
 
+ALTER TABLE [dbo].[chainings] ADD DEFAULT  GETDATE() FOR [created_at];
 
 --- #####################################################################################################################
 
@@ -108,10 +116,10 @@ CREATE TABLE [dbo].[attempts](
 	[attempt_name] [nvarchar](255) NOT NULL,
 	[attempt_student_identifier] [nvarchar](255) NOT NULL,
 	[attempt_main_path] [nvarchar](255) NOT NULL,
-	[attempt_submission_time] [nvarchar](255) NOT NULL,
+	[attempt_submission_time] [nvarchar](255) NULL,
 	[attempt_grading_time] [nvarchar](255) NULL,
 	[attempt_grade_breakdown] [nvarchar](255) NULL,
-	[attempt_grade_complete] [bit] NOT NULL,
+	[attempt_grade_complete] [bit] NULL,
 	[attempt_assignment] [nvarchar](255) NOT NULL,
 	[created_at] [datetime] NULL,
 	[updated_at] [datetime] NULL
@@ -123,3 +131,5 @@ ALTER TABLE [dbo].[attempts] ADD PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY];
 
 ALTER TABLE [dbo].[attempts] ADD  DEFAULT ('0') FOR [attempt_grade_complete];
+ALTER TABLE [dbo].[attempts] ADD DEFAULT  GETDATE() FOR [attempt_submission_time];
+ALTER TABLE [dbo].[attempts] ADD DEFAULT  GETDATE() FOR [created_at];
