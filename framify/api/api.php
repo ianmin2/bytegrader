@@ -53,8 +53,12 @@ class DissertationAPI
 
     public function addUser($userData)
     {
+
+        //@ Encrypt the provided password [if one is defined]
+        if ($userData['password']) $userData['password'] = password_hash($userData["password"], PASSWORD_DEFAULT);
+
         $processed_values = $this->getFieldNamesAndValues($userData);
-        return json_encode($this->$this->c->aQuery("INSERT INTO users {$processed_values['keys']} VALUES {$processed_values['values']}", true, " User registered.", "User Registration Failed!"));
+        return ($this->$this->c->aQuery("INSERT INTO users {$processed_values['keys']} VALUES {$processed_values['values']}", true, " User registered.", "User Registration Failed!"));
     }
 
     //=============================================================================
@@ -68,7 +72,7 @@ class DissertationAPI
     public function addAssignment($assignmentData)
     {
         $processed_values = $this->getFieldNamesAndValues($assignmentData);
-        return json_encode($this->$this->c->aQuery("INSERT INTO assignments {$processed_values['keys']} VALUES {$processed_values['values']}", true, " Assignment Added.", "Assignment Addition Failed!"));
+        return ($this->$this->c->aQuery("INSERT INTO assignments {$processed_values['keys']} VALUES {$processed_values['values']}", true, " Assignment Added.", "Assignment Addition Failed!"));
     }
 
 
@@ -83,7 +87,7 @@ class DissertationAPI
     public function addRoute($routeData)
     {
         $processed_values = $this->getFieldNamesAndValues($routeData);
-        return json_encode($this->$this->c->aQuery("INSERT INTO routes {$processed_values['keys']} VALUES {$processed_values['values']}", true, "Assignment Rule registered.", "Failed to register the assignment rule!"));
+        return ($this->$this->c->aQuery("INSERT INTO routes {$processed_values['keys']} VALUES {$processed_values['values']}", true, "Assignment Rule registered.", "Failed to register the assignment rule!"));
     }
 
 
@@ -99,7 +103,7 @@ class DissertationAPI
     public function addChaining($chainingData)
     {
         $processed_values = $this->getFieldNamesAndValues($chainingData);
-        return json_encode($this->$this->c->aQuery("INSERT INTO chainings {$processed_values['keys']} VALUES {$processed_values['values']}", true, "Assignment Chaining Added.", "Failed to records assignment chaining!"));
+        return ($this->$this->c->aQuery("INSERT INTO chainings {$processed_values['keys']} VALUES {$processed_values['values']}", true, "Assignment Chaining Added.", "Failed to records assignment chaining!"));
     }
 
     //=============================================================================
@@ -113,7 +117,7 @@ class DissertationAPI
     public function addAttempt($attemptData)
     {
         $processed_values = $this->getFieldNamesAndValues($attemptData);
-        return json_encode($this->$this->c->aQuery("INSERT INTO attempts {$processed_values['keys']} VALUES {$processed_values['values']}", true, "Attempt registered.", "Failed to record assignment attempt!"));
+        return ($this->$this->c->aQuery("INSERT INTO attempts {$processed_values['keys']} VALUES {$processed_values['values']}", true, "Attempt registered.", "Failed to record assignment attempt!"));
     }
 
 
