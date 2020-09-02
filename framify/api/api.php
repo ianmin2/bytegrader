@@ -40,6 +40,15 @@ class DissertationAPI
         return ["keys" => $field_names, "values" => $field_values, "raw_keys" => $keys, "raw_values" => $values];
     }
 
+    private function ensureExists($expected = [], $provided = [])
+    {
+        $validated = true;
+        foreach ($expected as $pos => $field) {
+            if ($provided[$field] == null) $validated = false;
+        }
+        return $validated;
+    }
+
 
     //=============================================================================
     //# USERS
@@ -59,6 +68,22 @@ class DissertationAPI
 
         $processed_values = $this->getFieldNamesAndValues($userData);
         return ($this->$this->c->aQuery("INSERT INTO users {$processed_values['keys']} VALUES {$processed_values['values']}", true, " User registered.", "User Registration Failed!"));
+    }
+
+    public function loginUser($loginData)
+    {
+        if (!$this->ensureExists(['email', 'password'], $loginData)) die($this->c->wrapResponse(422, 'Not all required data was provided'));
+
+        //@ Run the filter [for good measure and to minimize the possibility of SQL injection]
+        $processed_values = $this->getFieldNamesAndValues($loginData);
+        $matchingUsers = $this->c->printQueryResults("SELECT * FROM users WHERE email='{$processed_values['email']}' OR username='{$processed_values['email']}'");
+        if ($matchingUsers == null || $matchingUsers == []) die($this->c->wrapResponse(404, 'No matching account was found'));
+
+        //@ Otherwise ensure that the passwords match
+        if (!password_verify($processed_values["password"], $matchingUsers[0]["password"])) die($this->c->wrapResponse(401, "Invalid access credentials, try again."));
+
+        //@ Continue with JWT token creation here
+
     }
 
     //=============================================================================
