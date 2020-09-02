@@ -41,6 +41,7 @@ unset($_REQUEST["_"]);
 unset($_REQUEST["token"]);
 
 
+
 if (@$command) {
 
 
@@ -48,13 +49,40 @@ if (@$command) {
 
     $proc = new DissertationAPI($connection);
 
-
     switch ($command) {
 
             //# ADDER HANDLER
         case 'add':
-            echo $proc->addFunc($_REQUEST);
-            exit;
+
+            switch ($table) {
+                case 'user':
+                    $
+                    break;
+
+                case 'assignment':
+                    # code...
+                    break;
+
+                case 'rule':
+                    # code...
+                    break;
+
+                case 'chaining':
+                    # code...
+                    break;
+
+                case 'attempt':
+                    # code...
+                    break;
+
+                default:
+                    # code...
+                    break;
+            }
+
+
+            // echo $proc->addFunc($_REQUEST);
+            // exit;
             break;
 
             //# SIMPLE COUNTER FUNCTION 

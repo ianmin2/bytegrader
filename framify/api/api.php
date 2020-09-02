@@ -10,17 +10,40 @@ class DissertationAPI
     }
 
 
-    public function getRoutes()
+    private function getFieldNamesAndValues($fieldsData)
     {
-        return json_encode($this->c->printQueryResults("SELECT * FROM routes;"));
+
+        $keys   = [];
+        $values = [];
+
+        while ($field_name = current($fieldsData)) {
+            //echo key($fieldsData).' '.$field_name.'<br>';
+            array_push($keys, key($fieldsData));
+            array_push($values, $field_name);
+            next($fieldsData);
+        }
+
+        $field_names  = "(";
+        $field_values = "(";
+
+
+        foreach ($keys as $pos => $field) {
+
+            $field_names  .= $this->sanitize($field) . ",";
+
+            $field_values .= "'" . $this->sanitize($values[$pos]) . "',";
+        }
+
+        $field_names     = rtrim($field_names, ",") . ")";
+        $field_values    = rtrim($field_values, ",") . ")";
+
+        return ["keys" => $field_names, "values" => $field_values, "raw_keys" => $keys, "raw_values" => $values];
     }
 
 
-    public function getAssignments()
-    {
-        return json_encode($this->c->printQueryResults("SELECT * FROM assignments;"));
-    }
-
+    //=============================================================================
+    //# USERS
+    //=============================================================================
 
     public function getUsers()
     {
@@ -28,18 +51,82 @@ class DissertationAPI
     }
 
 
+    public function addUser($userData)
+    {
+        $processed_values = $this->getFieldNamesAndValues($userData);
+        return json_encode($this->$this->c->aQuery("INSERT INTO users {$processed_values['keys']} VALUES {$processed_values['values']}", true, " User registered.", "User Registration Failed!"));
+    }
+
+    //=============================================================================
+    //# ASSIGNMENTS
+    //=============================================================================
+    public function getAssignments()
+    {
+        return json_encode($this->c->printQueryResults("SELECT * FROM assignments;"));
+    }
+
+    public function addAssignment($assignmentData)
+    {
+        $processed_values = $this->getFieldNamesAndValues($assignmentData);
+        return json_encode($this->$this->c->aQuery("INSERT INTO assignments {$processed_values['keys']} VALUES {$processed_values['values']}", true, " Assignment Added.", "Assignment Addition Failed!"));
+    }
+
+
+    //=============================================================================
+    //# RULES
+    //=============================================================================
+    public function getRoutes()
+    {
+        return json_encode($this->c->printQueryResults("SELECT * FROM routes;"));
+    }
+
+    public function addRoute($routeData)
+    {
+        $processed_values = $this->getFieldNamesAndValues($routeData);
+        return json_encode($this->$this->c->aQuery("INSERT INTO routes {$processed_values['keys']} VALUES {$processed_values['values']}", true, "Assignment Rule registered.", "Failed to register the assignment rule!"));
+    }
+
+
+    //=============================================================================
+    //# CHAINING
+    //=============================================================================
     public function getChainings()
     {
         return json_encode($this->c->printQueryResults("SELECT * FROM chainings;"));
     }
 
 
+    public function addChaining($chainingData)
+    {
+        $processed_values = $this->getFieldNamesAndValues($chainingData);
+        return json_encode($this->$this->c->aQuery("INSERT INTO chainings {$processed_values['keys']} VALUES {$processed_values['values']}", true, "Assignment Chaining Added.", "Failed to records assignment chaining!"));
+    }
+
+    //=============================================================================
+    //# ATTEMPTS
+    //=============================================================================
     public function getAttempts()
     {
         return json_encode($this->c->printQueryResults("SELECT * FROM attempts;"));
     }
 
+    public function addAttempt($attemptData)
+    {
+        $processed_values = $this->getFieldNamesAndValues($attemptData);
+        return json_encode($this->$this->c->aQuery("INSERT INTO attempts {$processed_values['keys']} VALUES {$processed_values['values']}", true, "Attempt registered.", "Failed to record assignment attempt!"));
+    }
 
+
+
+
+    //=============================================================================
+    // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ GENERAL @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    //=============================================================================
+
+    public function sanitize($val)
+    {
+        return preg_replace('/\;/i', ',', $val);
+    }
 
     //@ ADDER FUNCTION
     public function addFunc($addData)
@@ -81,7 +168,7 @@ class DissertationAPI
         $query = "INSERT INTO " . $table . " " . $field_names . " VALUES " . $field_values . " " . @$extras;
 
         // return $this->c->makeResponse(200,$query);
-        return $this->c->aQuery($query, true, $table . " record added", "Failed");
+        return $this->c->aQuery($query, true,  " record added", "Failed");
     }
 
     //@ CUSTOM COUNTER
