@@ -1,8 +1,8 @@
 <?php
 
 //! HENDLE NATIVE php ERROR MESSAGE DISPLAY
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
+ini_set('display_errors', @$_ENV["DEBUG"] == "true" ? 1 : 0);
+ini_set('display_startup_errors', @$_ENV["DEBUG"] == "true" ? 1 : 0);
 error_reporting(@$_ENV["DEBUG"] == "true" ? E_ALL : 0);
 
 //@ SET THE json CONTENT TYPE
@@ -19,7 +19,7 @@ include("classes/r_main.php");
 unset($_REQUEST["password2"]);
 
 //ADD FILTERS TO PREVENT PIGGYBACKING ON ALL PARAMS
-$secure = ["add", "del", "update", "truncate", "drop", "getAll", "custom"];
+$secure = ["add", "auth", "del", "update", "truncate", "drop", "getAll", "custom"];
 // $secure = [];
 
 $errMsg = $connection->wrapResponse(500, "Could not verify your access level to perform this task!<br>Please login to continue.");

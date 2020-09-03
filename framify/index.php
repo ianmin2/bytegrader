@@ -8,10 +8,39 @@ use Symfony\Component\Dotenv\Dotenv;
 $dotenv = new Dotenv();
 $dotenv->load(__DIR__ . '/.env');
 
+//@ LOAD THE JWT HELPER 
+include "jwt.php";
+$jwtHandler = new AuthTokenHandler("ianmin2");
+
+function authValidate($authToken, $jwtFactory)
+{
+    $tkn = ($jwtFactory->decode($authToken));
+
+    if ($tkn["response"] != 200) return false;
+    return $tkn["data"]["message"];
+}
+
+// $BaggedToken = ($tokenizer->encode(array("username" => "ianmin2")));
+
+// echo "<br><br>Bagged:\t <pre>";
+// print_r($BaggedToken);
+// echo "</pre>";
+
+// $token = $BaggedToken["data"]["message"];
+// echo "<br><br>Extracted:\t <pre>$token</pre>";
+
+// echo "Actual \t <pre>";
+// print_r($tokenizer->decode($token));
+// echo "</pre>";
+
+
+// echo "Spoofed \t" . $tokenizer->decode($spoofedToken);
+
+exit;
 
 //@ HANDLE RUNTIME ERROR DISPLAY
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
+ini_set('display_errors', @$_ENV["DEBUG"] == "true" ? 1 : 0);
+ini_set('display_startup_errors', @$_ENV["DEBUG"] == "true" ? 1 : 0);
 error_reporting(@$_ENV["DEBUG"] == "true" ? E_ALL : 0);
 
 //@ ALLOW CORS REQUESTS
@@ -56,38 +85,48 @@ if (@$command) {
 
             switch ($table) {
                 case 'user':
-                    $
+                    //@ Add a user
+                    echo $proc->addUser($_REQUEST);
                     break;
 
                 case 'assignment':
-                    # code...
+                    //@ Add an assignment 
+                    echo $proc->addAssignment($_REQUEST);
                     break;
 
                 case 'rule':
-                    # code...
+                    //@ Add a new assignment ruleset 
+                    echo $proc->addRoute($_REQUEST);
                     break;
 
                 case 'chaining':
-                    # code...
+                    //@ Add a new assignment chaining 
+                    echo $proc->addChaining($_REQUEST);
                     break;
 
                 case 'attempt':
-                    # code...
+                    //@ Add a new assignment attempt record
+                    echo $proc->addAttempt($_REQUEST);
                     break;
 
                 default:
-                    # code...
+                    #//@ Give a generic failure message
+                    echo '{"response":404, "data": {"message": "Could not find the referenced addition resource."}}';
                     break;
             }
 
-
-            // echo $proc->addFunc($_REQUEST);
-            // exit;
             break;
 
             //# SIMPLE COUNTER FUNCTION 
+
         case 'count':
             echo $proc->countFunc($_REQUEST);
+            exit;
+            break;
+
+        case "auth":
+            $creds = $proc->loginUser($_REQUEST);
+            echo $creds;
             exit;
             break;
 
@@ -131,31 +170,31 @@ if (@$command) {
             break;
 
             //# DELETION HANDLER
-        case 'del':
-            echo $proc->delFunc($_REQUEST);
-            exit;
-            break;
+            // case 'del':
+            //     echo $proc->delFunc($_REQUEST);
+            //     exit;
+            //     break;
 
-            //# UPDATE HANDLER
-        case 'update':
-            echo $proc->updateFunc($_REQUEST);
-            exit;
-            break;
+            //     # UPDATE HANDLER
+            // case 'update':
+            //     echo $proc->updateFunc($_REQUEST);
+            //     exit;
+            //     break;
 
-            //# TRUNCATE HANDLER
-        case 'truncate':
-            echo $proc->truncateFunc($_REQUEST);
-            exit;
-            break;
+            //     # TRUNCATE HANDLER
+            // case 'truncate':
+            //     echo $proc->truncateFunc($_REQUEST);
+            //     exit;
+            //     break;
 
-            //# TABLE DROP HANDLER
-        case 'drop':
-            echo $proc->dropFunc($_REQUEST);
-            exit;
-            break;
+            //     # TABLE DROP HANDLER
+            // case 'drop':
+            //     echo $proc->dropFunc($_REQUEST);
+            //     exit;
+            //     break;
 
-            //# PERFORM FULLY CUSTOM MANIPULATIONS
-        case 'custom':
+            //     # PERFORM FULLY CUSTOM MANIPULATIONS
+            // case 'custom':
             echo $proc->customFunc($_REQUEST);
             exit;
             break;

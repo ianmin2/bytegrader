@@ -4,9 +4,8 @@
     "description": "Registers environment variables from a .env file",
     "keywords": ["environment", "env", "dotenv"],
     "homepage": "https://symfony.com",
-    "license" : "MIT",
-    "authors": [
-        {
+    "license": "MIT",
+    "authors": [{
             "name": "Fabien Potencier",
             "email": "fabien@symfony.com"
         },
@@ -27,11 +26,14 @@
         "exclude-from-classmap": [
             "/Tests/"
         ]
-    },
-    "minimum-stability": "dev",
-    "extra": {
-        "branch-alias": {
-            "dev-master": "5.1-dev"
-        }
     }
+    /*
+        // ,
+        // "minimum-stability": "dev",
+        // "extra": {
+        //     "branch-alias": {
+        //         "dev-master": "5.1-dev"
+        //     }
+        // }
+        */
 }

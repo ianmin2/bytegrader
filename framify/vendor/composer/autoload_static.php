@@ -15,6 +15,10 @@ class ComposerStaticInitfebf4a20cafb3f1e27694eb11f1270d5
         array (
             'Symfony\\Component\\Dotenv\\' => 25,
         ),
+        'A' => 
+        array (
+            'Ahc\\Jwt\\' => 8,
+        ),
     );
 
     public static $prefixDirsPsr4 = array (
@@ -22,6 +26,14 @@ class ComposerStaticInitfebf4a20cafb3f1e27694eb11f1270d5
         array (
             0 => __DIR__ . '/..' . '/symfony/dotenv',
         ),
+        'Ahc\\Jwt\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/adhocore/jwt/src',
+        ),
+    );
+
+    public static $fallbackDirsPsr4 = array (
+        0 => __DIR__ . '/../..' . '/vendor',
     );
 
     public static function getInitializer(ClassLoader $loader)
@@ -29,6 +41,7 @@ class ComposerStaticInitfebf4a20cafb3f1e27694eb11f1270d5
         return \Closure::bind(function () use ($loader) {
             $loader->prefixLengthsPsr4 = ComposerStaticInitfebf4a20cafb3f1e27694eb11f1270d5::$prefixLengthsPsr4;
             $loader->prefixDirsPsr4 = ComposerStaticInitfebf4a20cafb3f1e27694eb11f1270d5::$prefixDirsPsr4;
+            $loader->fallbackDirsPsr4 = ComposerStaticInitfebf4a20cafb3f1e27694eb11f1270d5::$fallbackDirsPsr4;
 
         }, null, ClassLoader::class);
     }

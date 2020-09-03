@@ -7,4 +7,6 @@ $baseDir = dirname($vendorDir);
 
 return array(
     'Symfony\\Component\\Dotenv\\' => array($vendorDir . '/symfony/dotenv'),
+    'Ahc\\Jwt\\' => array($vendorDir . '/adhocore/jwt/src'),
+    '' => array($vendorDir . ''),
 );
