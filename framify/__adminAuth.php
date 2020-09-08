@@ -25,7 +25,9 @@ $secure = ["add", "auth", "del", "update", "truncate", "drop", "getAll", "custom
 $errMsg = $connection->wrapResponse(500, "Could not verify your access level to perform this task!<br>Please login to continue.");
 
 //! HANDLE *** IF THE SPECIFIED COMMAND REQUIRES EXTRA AUTHENTICATION
-if (in_array($_REQUEST['command'], $secure)) {
+//@ Add a concession for user registration
+if (in_array($_REQUEST['command'], $secure)  && !($_REQUEST['command'] == "add" && $_REQUEST['table'] == "user")) {
+
 
 	//! ENSURE THAT THE AUTHENTICATION TOKEN HAS BEEN PROVIDED
 	if (!@$_REQUEST["token"] || !@$_REQUEST["token"]["user"] || !@$_REQUEST["token"]["key"]) {

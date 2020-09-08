@@ -52,8 +52,6 @@ ALTER TABLE [dbo].[assignments] ADD PRIMARY KEY CLUSTERED
 
 
 ALTER TABLE [dbo].[assignments] ADD  DEFAULT (getdate()) FOR [assignment_created];
-ALTER TABLE [dbo].[assignments] ADD DEFAULT  GETDATE() FOR [assignment_created];
-
 
 --- #####################################################################################################################
 

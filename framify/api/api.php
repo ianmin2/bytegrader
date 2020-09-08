@@ -25,13 +25,14 @@ class DissertationAPI
 
         $field_names  = "(";
         $field_values = "(";
+        $field_indexer = [];
 
 
         foreach ($keys as $pos => $field) {
 
             $field_names  .= $this->sanitize($field) . ",";
 
-            $field_values .= "'" . $this->sanitize($values[$pos]) . "',";
+            $field_values .=   ($field == 'password') ? "'{$values[$pos]}'" :  "'" . $this->sanitize($values[$pos]) . "',";
         }
 
         $field_names     = rtrim($field_names, ",") . ")";
@@ -63,11 +64,14 @@ class DissertationAPI
     public function addUser($userData)
     {
 
-        //@ Encrypt the provided password [if one is defined]
-        if ($userData['password']) $userData['password'] = password_hash($userData["password"], PASSWORD_DEFAULT);
+        $userData['password'] = password_hash($userData['password'], PASSWORD_DEFAULT);
 
         $processed_values = $this->getFieldNamesAndValues($userData);
-        return ($this->$this->c->aQuery("INSERT INTO users {$processed_values['keys']} VALUES {$processed_values['values']}", true, " User registered.", "User Registration Failed!"));
+
+        //@ Encrypt the provided password [if one is defined]
+        // return $this->c->makeResponse(200, $userData);
+        // return $this->c->makeResponse(200, "INSERT INTO users {$processed_values['keys']} VALUES {$processed_values['values']}");
+        return ($this->c->aQuery("INSERT INTO users {$processed_values['keys']} VALUES {$processed_values['values']}", true, " User registered.", "User Registration Failed!"));
     }
 
     public function loginUser($loginData)

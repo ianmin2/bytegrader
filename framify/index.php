@@ -1,5 +1,11 @@
 <?php
 
+if (isset($_SERVER["CONTENT_TYPE"]) && strpos($_SERVER["CONTENT_TYPE"], "application/json") !== false) {
+    $_POST = array_merge($_POST, (array) json_decode(trim(file_get_contents('php://input')), true));
+    $_REQUEST = array_merge($_REQUEST, $_POST);
+}
+
+
 require "vendor/autoload.php";
 
 //@ LOAD ENVIRONMENT VARIABLES 
@@ -8,9 +14,12 @@ use Symfony\Component\Dotenv\Dotenv;
 $dotenv = new Dotenv();
 $dotenv->load(__DIR__ . '/.env');
 
+
 //@ LOAD THE JWT HELPER 
 include "jwt.php";
 $jwtHandler = new AuthTokenHandler("ianmin2");
+
+
 
 function authValidate($authToken, $jwtFactory)
 {
@@ -19,6 +28,7 @@ function authValidate($authToken, $jwtFactory)
     if ($tkn["response"] != 200) return false;
     return $tkn["data"]["message"];
 }
+
 
 // $BaggedToken = ($tokenizer->encode(array("username" => "ianmin2")));
 
@@ -36,7 +46,7 @@ function authValidate($authToken, $jwtFactory)
 
 // echo "Spoofed \t" . $tokenizer->decode($spoofedToken);
 
-exit;
+
 
 //@ HANDLE RUNTIME ERROR DISPLAY
 ini_set('display_errors', @$_ENV["DEBUG"] == "true" ? 1 : 0);
@@ -44,10 +54,10 @@ ini_set('display_startup_errors', @$_ENV["DEBUG"] == "true" ? 1 : 0);
 error_reporting(@$_ENV["DEBUG"] == "true" ? E_ALL : 0);
 
 //@ ALLOW CORS REQUESTS
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: *");
-header("Access-Control-Allow-Methods: *");
-header("Content-Type:application/json");
+// header("Access-Control-Allow-Origin: *");
+// header("Access-Control-Allow-Headers: *");
+// header("Access-Control-Allow-Methods: *");
+// header("Content-Type:application/json");
 
 // echo json_encode($_REQUEST);
 // exit;
@@ -70,7 +80,6 @@ unset($_REQUEST["_"]);
 unset($_REQUEST["token"]);
 
 
-
 if (@$command) {
 
 
@@ -82,10 +91,10 @@ if (@$command) {
 
             //# ADDER HANDLER
         case 'add':
-
             switch ($table) {
                 case 'user':
                     //@ Add a user
+                    unset($_REQUEST["table"]);
                     echo $proc->addUser($_REQUEST);
                     break;
 
@@ -211,29 +220,6 @@ if (@$command) {
 }
 
 
-$router->get('/', function () {
-    return "DISSERTION ANGULAR APP PAGE WILL LOAD HERE";
-});
-
-$router->get("/api", function ($request) {
-    return '';
-});
-
-
-$router->get("/Rules", function ($request) {
-    return "Hapa"; // $proc->getRoutes();
-});
-
-// $router->get('/profile', function ($request) {
-//     return <<<HTML
-//     <h1>Profile</h1>
-//   HTML;
-// });
-
-// $router->post('/data', function ($request) {
-
-//     return json_encode($request->getBody());
-// });
 
 // $command = @$_REQUEST["command"];
 // unset($_REQUEST["command"]);
