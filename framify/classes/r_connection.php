@@ -103,6 +103,8 @@ class connection
     public final function wrap($json_encoded_content = '')
     {
 
+        $json_encoded_content = is_array($json_encoded_content) ? json_encode($json_encoded_content) : $json_encoded_content;
+
         if ($this->json_callback == "") :
 
             return $json_encoded_content;

@@ -17,7 +17,8 @@ $dotenv->load(__DIR__ . '/.env');
 
 //@ LOAD THE JWT HELPER 
 include "jwt.php";
-$jwtHandler = new AuthTokenHandler("ianmin2");
+$jwtHandler = new AuthTokenHandler($_ENV["ENCODING_KEY"]);
+$GLOBALS["jwt"] = $jwtHandler;
 
 
 function authValidate($authToken, $jwtFactory)

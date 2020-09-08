@@ -9,6 +9,11 @@ class DissertationAPI
         $this->c  = $connection;
     }
 
+    private function generateToken($userInfo)
+    {
+        return $GLOBALS['jwt']->encode($userInfo);
+    }
+
 
     private function getFieldNamesAndValues($fieldsData)
     {
@@ -57,7 +62,7 @@ class DissertationAPI
 
     public function getUsers()
     {
-        return json_encode($this->c->printQueryResults("SELECT id,name,email,username,user_active,user_last_seen,created_at FROM users;"));
+        return ($this->c->printQueryResults("SELECT id,name,email,username,user_active,user_last_seen,created_at FROM users;"));
     }
 
 
@@ -71,7 +76,13 @@ class DissertationAPI
         //@ Encrypt the provided password [if one is defined]
         // return $this->c->makeResponse(200, $userData);
         // return $this->c->makeResponse(200, "INSERT INTO users {$processed_values['keys']} VALUES {$processed_values['values']}");
-        return ($this->c->aQuery("INSERT INTO users {$processed_values['keys']} VALUES {$processed_values['values']}", true, " User registered.", "User Registration Failed!"));
+        $this->c->aQuery("INSERT INTO users {$processed_values['keys']} VALUES {$processed_values['values']}", true, " User registered.", "User Registration Failed!");
+
+        $specificData = $this->c->printQueryResults("SELECT id,name,email,username,user_active,user_last_seen,created_at FROM users WHERE email='{$userData['email']}' OR username='{$userData['email']}'");
+        if (is_array($specificData)) $specificData = $specificData[0];
+        $this->c->query("Update users set user_last_seen=getdate() WHERE id=" . $specificData["id"] . ";");
+
+        return ($this->generateToken($specificData));
     }
 
     public function loginUser($loginData)
@@ -80,14 +91,14 @@ class DissertationAPI
 
         //@ Run the filter [for good measure and to minimize the possibility of SQL injection]
         $processed_values = $this->getFieldNamesAndValues($loginData);
-        $matchingUsers = $this->c->printQueryResults("SELECT * FROM users WHERE email='{$processed_values['email']}' OR username='{$processed_values['email']}'");
-        if ($matchingUsers == null || $matchingUsers == []) die($this->c->wrapResponse(404, 'No matching account was found'));
+        $matchingUsers = $this->c->printQueryResults("SELECT id,name,email,username,user_active,user_last_seen,created_at FROM users WHERE email='{$processed_values['email']}' OR username='{$processed_values['email']}'");
+        if ($matchingUsers == null || $matchingUsers == []) die(($this->c->wrapResponse(404, 'No matching account was found')));
 
         //@ Otherwise ensure that the passwords match
-        if (!password_verify($processed_values["password"], $matchingUsers[0]["password"])) die($this->c->wrapResponse(401, "Invalid access credentials, try again."));
+        if (!password_verify($loginData["password"], $matchingUsers[0]["password"])) die($this->c->wrapResponse(401, "Invalid access credentials, try again."));
 
         //@ Continue with JWT token creation here
-
+        return $this->c->wrap($this->generateToken($matchingUsers));
     }
 
     //=============================================================================
@@ -95,7 +106,7 @@ class DissertationAPI
     //=============================================================================
     public function getAssignments()
     {
-        return json_encode($this->c->printQueryResults("SELECT * FROM assignments;"));
+        return $this->c->wrap($this->c->printQueryResults("SELECT * FROM assignments;"));
     }
 
     public function addAssignment($assignmentData)
@@ -110,7 +121,7 @@ class DissertationAPI
     //=============================================================================
     public function getRoutes()
     {
-        return json_encode($this->c->printQueryResults("SELECT * FROM routes;"));
+        return ($this->c->printQueryResults("SELECT * FROM routes;"));
     }
 
     public function addRoute($routeData)
@@ -125,7 +136,7 @@ class DissertationAPI
     //=============================================================================
     public function getChainings()
     {
-        return json_encode($this->c->printQueryResults("SELECT * FROM chainings;"));
+        return ($this->c->printQueryResults("SELECT * FROM chainings;"));
     }
 
 
@@ -140,7 +151,7 @@ class DissertationAPI
     //=============================================================================
     public function getAttempts()
     {
-        return json_encode($this->c->printQueryResults("SELECT * FROM attempts;"));
+        return ($this->c->printQueryResults("SELECT * FROM attempts;"));
     }
 
     public function addAttempt($attemptData)

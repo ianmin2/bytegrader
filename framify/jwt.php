@@ -19,8 +19,9 @@ class AuthTokenHandler
     public function __construct($secretkey, $algo = "HS256", int $maxAge = 60 * 60 * 24 * 30)
     {
 
+        $secretkey = $secretkey ? $secretkey : $GLOBALS["ENCODING_KEY"];
 
-        if ($secretkey == null) die($this->makeResponse(500, "Failed to capture the current session validation key"));
+        if ($secretkey == null) die(json_encode($this->makeResponse(500, "Failed to capture the current session validation key")));
 
         $this->secret_key = $secretkey;
 
@@ -29,7 +30,8 @@ class AuthTokenHandler
         try {
             $this->jwt = new JWT($this->secret_key, $algo, $maxAge);
         } catch (JWTException $err) {
-            echo $err->getMessage();
+            echo json_encode($this->makeResponse(400, $err->getMessage()));
+            die;
         }
     }
 
