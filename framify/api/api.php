@@ -82,7 +82,7 @@ class DissertationAPI
         if (is_array($specificData)) $specificData = $specificData[0];
         $this->c->query("Update users set user_last_seen=getdate() WHERE id=" . $specificData["id"] . ";");
 
-        return ($this->generateToken($specificData));
+        return $this->c->wrap($this->generateToken($specificData));
     }
 
     public function loginUser($loginData)
