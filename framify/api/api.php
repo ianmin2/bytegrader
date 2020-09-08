@@ -57,7 +57,7 @@ class DissertationAPI
 
     public function getUsers()
     {
-        return json_encode($this->c->printQueryResults("SELECT id,name,email,created_at FROM users;"));
+        return json_encode($this->c->printQueryResults("SELECT id,name,email,username,user_active,user_last_seen,created_at FROM users;"));
     }
 
 

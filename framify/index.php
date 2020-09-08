@@ -20,7 +20,6 @@ include "jwt.php";
 $jwtHandler = new AuthTokenHandler("ianmin2");
 
 
-
 function authValidate($authToken, $jwtFactory)
 {
     $tkn = ($jwtFactory->decode($authToken));
@@ -30,22 +29,21 @@ function authValidate($authToken, $jwtFactory)
 }
 
 
-// $BaggedToken = ($tokenizer->encode(array("username" => "ianmin2")));
+// // $BaggedToken = ($tokenizer->encode(array("username" => "ianmin2")));
 
-// echo "<br><br>Bagged:\t <pre>";
-// print_r($BaggedToken);
-// echo "</pre>";
+// // echo "<br><br>Bagged:\t <pre>";
+// // print_r($BaggedToken);
+// // echo "</pre>";
 
-// $token = $BaggedToken["data"]["message"];
-// echo "<br><br>Extracted:\t <pre>$token</pre>";
+// // $token = $BaggedToken["data"]["message"];
+// // echo "<br><br>Extracted:\t <pre>$token</pre>";
 
-// echo "Actual \t <pre>";
-// print_r($tokenizer->decode($token));
-// echo "</pre>";
+// // echo "Actual \t <pre>";
+// // print_r($tokenizer->decode($token));
+// // echo "</pre>";
 
 
-// echo "Spoofed \t" . $tokenizer->decode($spoofedToken);
-
+// // echo "Spoofed \t" . $tokenizer->decode($spoofedToken);
 
 
 //@ HANDLE RUNTIME ERROR DISPLAY
@@ -71,7 +69,7 @@ include("__adminAuth.php");
 $command = @$_REQUEST["command"];
 $table = @$_REQUEST["table"];
 unset($_REQUEST["command"]);
-
+// unset($_REQUEST["table"]);
 
 //# REMOVE THE CALLBACK VARIABLES 
 //! [REMOVE ONLY AFTER INCLUDING THE CONNECTION CLASSES TO ENABLE CORS]
@@ -82,7 +80,6 @@ unset($_REQUEST["token"]);
 
 if (@$command) {
 
-
     include __DIR__ . "/api/api.php";
 
     $proc = new DissertationAPI($connection);
@@ -92,35 +89,42 @@ if (@$command) {
             //# ADDER HANDLER
         case 'add':
             switch ($table) {
+
                 case 'user':
                     //@ Add a user
                     unset($_REQUEST["table"]);
                     echo $proc->addUser($_REQUEST);
+                    exit;
                     break;
 
                 case 'assignment':
                     //@ Add an assignment 
                     echo $proc->addAssignment($_REQUEST);
+                    exit;
                     break;
 
                 case 'rule':
                     //@ Add a new assignment ruleset 
                     echo $proc->addRoute($_REQUEST);
+                    exit;
                     break;
 
                 case 'chaining':
                     //@ Add a new assignment chaining 
                     echo $proc->addChaining($_REQUEST);
+                    exit;
                     break;
 
                 case 'attempt':
                     //@ Add a new assignment attempt record
                     echo $proc->addAttempt($_REQUEST);
+                    exit;
                     break;
 
                 default:
                     #//@ Give a generic failure message
                     echo '{"response":404, "data": {"message": "Could not find the referenced addition resource."}}';
+                    exit;
                     break;
             }
 
@@ -145,26 +149,32 @@ if (@$command) {
             switch ($table) {
                 case 'routes':
                     echo $proc->getRoutes();
+                    exit;
                     break;
 
                 case "assignments":
                     echo $proc->getAssignments();
+                    exit;
                     break;
 
                 case "users":
                     echo $proc->getUsers();
+                    exit;
                     break;
 
                 case "chaining":
                     echo $proc->getChainings();
+                    exit;
                     break;
 
                 case "attempts":
                     echo $proc->getAttempts();
+                    exit;
                     break;
 
                 default:
                     echo "Nadaaaaaaaaa! {$table}";
+                    exit;
                     break;
             }
 

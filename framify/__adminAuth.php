@@ -26,7 +26,7 @@ $errMsg = $connection->wrapResponse(500, "Could not verify your access level to 
 
 //! HANDLE *** IF THE SPECIFIED COMMAND REQUIRES EXTRA AUTHENTICATION
 //@ Add a concession for user registration
-if (in_array($_REQUEST['command'], $secure)  && !($_REQUEST['command'] == "add" && $_REQUEST['table'] == "user")) {
+if (in_array(@$_REQUEST['command'], $secure)  && !($_REQUEST['command'] == "add" && $_REQUEST['table'] == "user")) {
 
 
 	//! ENSURE THAT THE AUTHENTICATION TOKEN HAS BEEN PROVIDED

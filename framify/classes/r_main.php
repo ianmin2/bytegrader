@@ -105,6 +105,10 @@ if (@$id != '') {
 		//Establishing a database connection courtesy of the imported  resource files
 		$connection = new connection($db, $host, $user, $pass, $driver, $jsoncallback, $port);
 
+		// //@ Confirm the structure of the main/selected table
+		// $q = $connection->printQueryResults("select COLUMN_NAME from information_schema.columns where table_name = 'users' order by ordinal_position");		
+		// die(json_encode($q));
+
 		//@ Check if the startup database table is defined and scaffold the database where applicable
 		if ($db_test_table == null) return;
 
