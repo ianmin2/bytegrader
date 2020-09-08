@@ -50,7 +50,7 @@ class DissertationAPI
     {
         $validated = true;
         foreach ($expected as $pos => $field) {
-            if ($provided[$field] == null) $validated = false;
+            if (@$provided[$field] == null) $validated = false;
         }
         return $validated;
     }
@@ -95,7 +95,7 @@ class DissertationAPI
 
         //@ Run the filter [for good measure and to minimize the possibility of SQL injection]
         $processed_values = $this->getFieldNamesAndValues($loginData);
-        $matchingUsers = $this->c->printQueryResults("SELECT id,name,email,username,user_active,user_last_seen,created_at FROM users WHERE email='{$processed_values['email']}' OR username='{$processed_values['email']}'");
+        $matchingUsers = $this->c->printQueryResults("SELECT id,name,email,username,user_active,user_last_seen,created_at FROM users WHERE email='" . @$processed_values['username'] . "' OR username='" . @$processed_values['email'] . "'");
         if ($matchingUsers == null || $matchingUsers == []) die(($this->c->wrapResponse(404, 'No matching account was found')));
         $matchingUsers = $matchingUsers[0];
 
