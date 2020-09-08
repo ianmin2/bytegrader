@@ -78,10 +78,14 @@ class DissertationAPI
         // return $this->c->makeResponse(200, "INSERT INTO users {$processed_values['keys']} VALUES {$processed_values['values']}");
         $this->c->aQuery("INSERT INTO users {$processed_values['keys']} VALUES {$processed_values['values']}", true, " User registered.", "User Registration Failed!");
 
+        //@ Fetch the newly inserted user data [inefficient I know but it ain't fun re-doing a project from scratch; was previously using an ORM with laravel]
         $specificData = $this->c->printQueryResults("SELECT id,name,email,username,user_active,user_last_seen,created_at FROM users WHERE email='{$userData['email']}' OR username='{$userData['email']}'");
         if (is_array($specificData)) $specificData = $specificData[0];
+
+        //@ Update the "last seen" field
         $this->c->query("Update users set user_last_seen=getdate() WHERE id=" . $specificData["id"] . ";");
 
+        //@ return the JWT token [where applicable]
         return $this->c->wrap($this->generateToken($specificData));
     }
 
@@ -93,9 +97,13 @@ class DissertationAPI
         $processed_values = $this->getFieldNamesAndValues($loginData);
         $matchingUsers = $this->c->printQueryResults("SELECT id,name,email,username,user_active,user_last_seen,created_at FROM users WHERE email='{$processed_values['email']}' OR username='{$processed_values['email']}'");
         if ($matchingUsers == null || $matchingUsers == []) die(($this->c->wrapResponse(404, 'No matching account was found')));
+        $matchingUsers = $matchingUsers[0];
 
         //@ Otherwise ensure that the passwords match
-        if (!password_verify($loginData["password"], $matchingUsers[0]["password"])) die($this->c->wrapResponse(401, "Invalid access credentials, try again."));
+        if (!password_verify($loginData["password"], $matchingUsers["password"])) die($this->c->wrapResponse(401, "Invalid access credentials, try again."));
+
+        //@ Update the "last seen" field
+        $this->c->query("Update users set user_last_seen=getdate() WHERE id=" . $matchingUsers["id"] . ";");
 
         //@ Continue with JWT token creation here
         return $this->c->wrap($this->generateToken($matchingUsers));
