@@ -15,6 +15,15 @@ class DissertationAPI
     }
 
 
+    private function processFieldNamesAndValues($fieldData)
+    {
+        while ($field_name = current(($fieldData))) {
+            $fieldData[key($fieldData)] = $this->sanitize($field_name);
+            next($fieldData);
+        }
+        return $fieldData;
+    }
+
     private function getFieldNamesAndValues($fieldsData)
     {
 
@@ -91,12 +100,12 @@ class DissertationAPI
 
     public function loginUser($loginData)
     {
-        if (!$this->ensureExists(['email', 'password'], $loginData)) die($this->c->wrapResponse(422, 'Not all required data was provided'));
+        if (!$this->ensureExists(['username', 'password'], $loginData)) die($this->c->wrapResponse(422, 'Not all required data was provided'));
 
         //@ Run the filter [for good measure and to minimize the possibility of SQL injection]
-        $processed_values = $this->getFieldNamesAndValues($loginData);
-        $matchingUsers = $this->c->printQueryResults("SELECT id,name,email,username,user_active,user_last_seen,created_at FROM users WHERE email='" . @$processed_values['username'] . "' OR username='" . @$processed_values['email'] . "'");
-        if ($matchingUsers == null || $matchingUsers == []) die(($this->c->wrapResponse(404, 'No matching account was found')));
+        $processed_values = $this->processFieldNamesAndValues($loginData);
+        $matchingUsers = $this->c->printQueryResults("SELECT id,name,email,username,user_active,user_last_seen,created_at FROM users WHERE email='" . @$processed_values['username'] . "' OR username='" . @$processed_values['username'] . "'");
+        if ($matchingUsers == null || $matchingUsers == []) die(($this->c->wrapResponse(404, 'No matching account was found', $processed_values)));
         $matchingUsers = $matchingUsers[0];
 
         //@ Otherwise ensure that the passwords match
