@@ -78,7 +78,7 @@ class DissertationAPI
     public function addUser($userData)
     {
 
-        $userData['password'] = password_hash($userData['password'], PASSWORD_DEFAULT);
+        $userData['password'] = password_hash($this->sanitize($userData['password']), PASSWORD_DEFAULT);
 
         $processed_values = $this->getFieldNamesAndValues($userData);
 
@@ -104,12 +104,16 @@ class DissertationAPI
 
         //@ Run the filter [for good measure and to minimize the possibility of SQL injection]
         $processed_values = $this->processFieldNamesAndValues($loginData);
-        $matchingUsers = $this->c->printQueryResults("SELECT id,name,email,username,user_active,user_last_seen,created_at FROM users WHERE email='" . @$processed_values['username'] . "' OR username='" . @$processed_values['username'] . "'");
-        if ($matchingUsers == null || $matchingUsers == []) die(($this->c->wrapResponse(404, 'No matching account was found', $processed_values)));
+        $matchingUsers = $this->c->printQueryResults("SELECT id,name,email,username,user_active,user_last_seen,created_at,password FROM users WHERE email='" . $processed_values['username'] . "' OR username='" . $processed_values['username'] . "';");
+
+
+        if (!is_array($matchingUsers)) die(($this->c->wrapResponse(404, 'No matching account was found', $processed_values)));
         $matchingUsers = $matchingUsers[0];
 
         //@ Otherwise ensure that the passwords match
         if (!password_verify($loginData["password"], $matchingUsers["password"])) die($this->c->wrapResponse(401, "Invalid access credentials, try again."));
+        //@ Remember to remove the password before issuing the JWT
+        unset($matchingUsers["password"]);
 
         //@ Update the "last seen" field
         $this->c->query("Update users set user_last_seen=getdate() WHERE id=" . $matchingUsers["id"] . ";");
