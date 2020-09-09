@@ -90,6 +90,7 @@ if (@$command) {
 
                 case 'assignment':
                     //@ Add an assignment 
+                    unset($_REQUEST["table"]);
                     echo $proc->addAssignment($_REQUEST);
                     exit;
                     break;
