@@ -28,6 +28,13 @@ $errMsg = $connection->wrapResponse(500, "Could not verify your access level to 
 //@ Add a concession for user registration
 if (in_array(@$_REQUEST['command'], $secure)  && !($_REQUEST['command'] == "add" && $_REQUEST['table'] == "user")) {
 
+	$headers = getallheaders();
+
+	echo "<pre>";
+	print_r(($headers));
+	echo "</pre>";
+	exit;
+
 
 	//! ENSURE THAT THE AUTHENTICATION TOKEN HAS BEEN PROVIDED
 	if (!@$_REQUEST["token"] || !@$_REQUEST["token"]["user"] || !@$_REQUEST["token"]["key"]) {

@@ -52,17 +52,7 @@ ini_set('display_errors', @$_ENV["DEBUG"] == "true" ? 1 : 0);
 ini_set('display_startup_errors', @$_ENV["DEBUG"] == "true" ? 1 : 0);
 error_reporting(@$_ENV["DEBUG"] == "true" ? E_ALL : 0);
 
-//@ ALLOW CORS REQUESTS
-// header("Access-Control-Allow-Origin: *");
-// header("Access-Control-Allow-Headers: *");
-// header("Access-Control-Allow-Methods: *");
-// header("Content-Type:application/json");
 
-// echo json_encode($_REQUEST);
-// exit;
-
-// echo phpinfo();
-// exit;
 
 //@ PERFORM BASIC AUTHENTICATION & DEPENDENCY IMPORTATION
 include("__adminAuth.php");
