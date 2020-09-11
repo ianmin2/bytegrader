@@ -245,7 +245,6 @@ class connection
      *  */
     public final function num_rows($statement, $stops = false)
     {
-
         return  $this->query($statement, $stops)->rowCount();
     }
 

@@ -138,7 +138,7 @@ class DissertationAPI
         //@ Kill if not enough info
         if (@$processed_values["raw_keys"][0] == null) die($this->c->wrapResponse(412, "Not enough assignment data."));
 
-        return $this->c->wrap($this->$this->c->aQuery("INSERT INTO assignments {$processed_values['keys']} VALUES {$processed_values['values']}", true, " Assignment Added.", "Assignment Addition Failed!"));
+        return ($this->c->aQuery("INSERT INTO assignments {$processed_values['keys']} VALUES {$processed_values['values']};", true, " Assignment Added.", "Assignment Addition Failed!"));
     }
 
 

@@ -18,7 +18,7 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: *");
 header("Access-Control-Allow-Methods: *");
 header("Content-Type:application/json");
-error_reporting(@$_ENV["DEBUG"] == "true" ? E_ALL : 0);
+error_reporting(@$_ENV["OUT_LOUD"] == "true" ? E_ALL : 0);
 
 date_default_timezone_set("Africa/Nairobi");
 

@@ -1,8 +1,8 @@
 <?php
 
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(@$_ENV["DEBUG"] == "true" ? E_ALL : 0);
+ini_set('display_errors', @$_ENV["OUT_LOUD"] == "true" ? 1 : 0);
+ini_set('display_startup_errors', @$_ENV["OUT_LOUD"] == "true" ? 1 : 0);
+error_reporting(@$_ENV["OUT_LOUD"] == "true" ? E_ALL : 0);
 
 //@ ALLOW CORS REQUESTS
 header("Access-Control-Allow-Origin: *");
