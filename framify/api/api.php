@@ -30,23 +30,18 @@ class DissertationAPI
         $keys   = [];
         $values = [];
 
-        while ($field_name = current($fieldsData)) {
-            //echo key($fieldsData).' '.$field_name.'<br>';
-            array_push($keys, key($fieldsData));
-            array_push($values, $field_name);
-            next($fieldsData);
-        }
-
         $field_names  = "(";
         $field_values = "(";
         $field_indexer = [];
 
+        foreach ($fieldsData as $key => $value) {
+            if ($value != null) {
+                array_push($keys, $key);
+                array_push($values, $value);
 
-        foreach ($keys as $pos => $field) {
-
-            $field_names  .= $this->sanitize($field) . ",";
-
-            $field_values .=   ($field == 'password') ? "'{$values[$pos]}'" :  "'" . $this->sanitize($values[$pos]) . "',";
+                $field_names  .= $this->sanitize($key) . ",";
+                $field_values .=   ($key == 'password') ? "'{$value}'" :  "'" . $this->sanitize($value) . "',";
+            }
         }
 
         $field_names     = rtrim($field_names, ",") . ")";
@@ -71,7 +66,7 @@ class DissertationAPI
 
     public function getUsers()
     {
-        return $this->c->wrap($this->c->printQueryResults("SELECT id,name,email,username,user_active,user_last_seen,created_at FROM users;"));
+        return $this->c->printQueryResults("SELECT id,name,email,username,user_active,user_last_seen,created_at FROM users;", true, true);
     }
 
 
@@ -127,7 +122,8 @@ class DissertationAPI
     //=============================================================================
     public function getAssignments()
     {
-        return $this->c->wrap($this->c->printQueryResults("SELECT * FROM assignments;"));
+        $assignment_list = $this->c->printQueryResults("SELECT * FROM assignments;", true, true);
+        return  is_array($assignment_list) ? $this->c->wrap(200, $assignment_list) : $assignment_list;
     }
 
     public function addAssignment($assignmentData)

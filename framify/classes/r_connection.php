@@ -129,7 +129,7 @@ class connection
     /** 
      * THE BASIC DIE ON ERROR HANDLER 
      * */
-    private final function die_on_error($stops = 'true')
+    private final function die_on_error($stops = 'true', $data = "")
     {
 
 
@@ -138,7 +138,7 @@ class connection
             /* 
     		 * Return the error to the client and stop execution 
     		 * */
-            echo $this->wrap($this->makeResponse(500, $this->con->errorInfo(), ""));
+            echo $this->wrap($this->makeResponse(500, $this->con->errorInfo(), $data));
             exit;
 
         else :
@@ -163,7 +163,7 @@ class connection
     	 * Execute the query then fetch the returned associateive array for all values 
     	 * */
         // echo "Running the query `{$statement}`\n\n";
-        $query = $this->con->query($statement) or $this->die_on_error($stops);
+        $query = $this->con->query($statement) or $this->die_on_error($stops, $statement);
         return $query;
     }
 
@@ -176,7 +176,7 @@ class connection
         /* 
     	 * Execute the query then fetch the returned associateive array for all values 
     	 * */
-        $query = $this->con->multi_query($statement) or $this->die_on_error($stops);
+        $query = $this->con->multi_query($statement) or $this->die_on_error($stops, $statement);
         return $query;
     }
 
@@ -237,7 +237,6 @@ class connection
 
         return $elements;
     }
-
 
 
     /**
