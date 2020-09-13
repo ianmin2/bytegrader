@@ -40,7 +40,7 @@ class DissertationAPI
                 array_push($values, $value);
 
                 $field_names  .= $this->sanitize($key) . ",";
-                $field_values .=   ($key == 'password') ? "'{$value}'" :  "'" . $this->sanitize($value) . "',";
+                $field_values .=   ($key == 'password') ? "'{$value}'" :  "'" . $this->sanitize(is_array($value) ? json_encode($value) : $value) . "',";
             }
         }
 
@@ -148,8 +148,13 @@ class DissertationAPI
 
     public function addRoute($routeData)
     {
+
         $processed_values = $this->getFieldNamesAndValues($routeData);
-        return ($this->$this->c->aQuery("INSERT INTO routes {$processed_values['keys']} VALUES {$processed_values['values']}", true, "Assignment Rule registered.", "Failed to register the assignment rule!"));
+
+        //@ Kill if not enough info
+        if (@$processed_values["raw_keys"][0] == null) die($this->c->wrapResponse(412, "Not enough grading rule data."));
+
+        return ($this->c->aQuery("INSERT INTO routes {$processed_values['keys']} VALUES {$processed_values['values']}", true, "Assignment Rule registered.", "Failed to register the assignment rule!"));
     }
 
 
@@ -165,7 +170,7 @@ class DissertationAPI
     public function addChaining($chainingData)
     {
         $processed_values = $this->getFieldNamesAndValues($chainingData);
-        return ($this->$this->c->aQuery("INSERT INTO chainings {$processed_values['keys']} VALUES {$processed_values['values']}", true, "Assignment Chaining Added.", "Failed to records assignment chaining!"));
+        return ($this->c->aQuery("INSERT INTO chainings {$processed_values['keys']} VALUES {$processed_values['values']}", true, "Assignment Chaining Added.", "Failed to records assignment chaining!"));
     }
 
     //=============================================================================
@@ -179,7 +184,7 @@ class DissertationAPI
     public function addAttempt($attemptData)
     {
         $processed_values = $this->getFieldNamesAndValues($attemptData);
-        return ($this->$this->c->aQuery("INSERT INTO attempts {$processed_values['keys']} VALUES {$processed_values['values']}", true, "Attempt registered.", "Failed to record assignment attempt!"));
+        return ($this->c->aQuery("INSERT INTO attempts {$processed_values['keys']} VALUES {$processed_values['values']}", true, "Attempt registered.", "Failed to record assignment attempt!"));
     }
 
 

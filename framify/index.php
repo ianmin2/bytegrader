@@ -97,6 +97,7 @@ if (@$command) {
 
                 case 'rule':
                     //@ Add a new assignment ruleset 
+                    unset($_REQUEST["table"]);
                     echo $proc->addRoute($_REQUEST);
                     exit;
                     break;
