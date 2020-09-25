@@ -146,7 +146,7 @@ if (@$command) {
                     break;
 
                 case "assignments":
-                    echo $proc->getAssignments();
+                    echo ($_REQUEST['id'] == null) ? $proc->getAssignments() : $proc->getAssignment($_REQUEST['id']);
                     exit;
                     break;
 

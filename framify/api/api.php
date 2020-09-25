@@ -120,10 +120,35 @@ class DissertationAPI
     //=============================================================================
     //# ASSIGNMENTS
     //=============================================================================
+    public function getAssignment($assignmentId)
+    {
+        $assignmentQuery = "SELECT 
+        assignment_id, assignment_name, assignment_owner, assignment_created, 
+        assignment_due, assignment_summary, assignment_last_modified, assignment_notes,
+        users.name as assignment_owner_name, users.email as assignment_owner_email
+    FROM assignments 
+        LEFT JOIN users
+            ON 
+                assignments.assignment_owner = users.id
+    WHERE 
+        assignments.assignment_id = {$assignmentId}";
+        $assignment_array = $this->c->printQueryResults($assignmentQuery, true, true);
+        return  is_array($assignment_array) == true ? $this->c->wrap(200, $assignment_array) : $assignment_array;
+    }
+
+
     public function getAssignments()
     {
-        $assignment_list = $this->c->printQueryResults("SELECT * FROM assignments;", true, true);
-        return  is_array($assignment_list) ? $this->c->wrap(200, $assignment_list) : $assignment_list;
+        $assignmentsQuery = "SELECT 
+        assignment_id, assignment_name, assignment_owner, assignment_created, 
+        assignment_due, assignment_summary, assignment_last_modified, assignment_notes,
+        users.name as assignment_owner_name, users.email as assignment_owner_email
+    FROM assignments 
+        LEFT JOIN users
+            ON 
+                assignments.assignment_owner = users.id;";
+        $assignment_list = $this->c->printQueryResults($assignmentsQuery, true, true);
+        return  is_array($assignment_list) == true ? $this->c->wrap(200, $assignment_list) : $assignment_list;
     }
 
     public function addAssignment($assignmentData)
@@ -143,7 +168,26 @@ class DissertationAPI
     //=============================================================================
     public function getRoutes()
     {
-        return ($this->c->printQueryResults("SELECT * FROM routes;"));
+
+        $routesQuery = "
+        SELECT 
+        rule_id, rule_method, rule_path, rule_name, rule_description, rule_assignment , 
+            assignments.assignment_name,
+            assignments.assignment_owner,
+            id as assignment_owner_id, 
+            name as assignment_owner_name, 
+            email as rule_assignment_owner_email,
+            rule_expected_status_code, rule_expected_data_type, rule_expected_data, rule_headers, rule_parameters, rule_grading,
+            routes.created_at, routes.updated_at
+        FROM routes
+            LEFT JOIN assignments
+                ON assignments.assignment_id = routes.rule_assignment
+            JOIN users 
+                ON assignments.assignment_owner = users.id
+        ";
+
+        $rules_list = ($this->c->printQueryResults($routesQuery, true, true));
+        return  is_array($rules_list) ? $this->c->wrap(200, $rules_list) : $rules_list;
     }
 
     public function addRoute($routeData)
@@ -196,7 +240,7 @@ class DissertationAPI
 
     public function sanitize($val)
     {
-        return preg_replace('/\;/i', ',', $val);
+        return  htmlspecialchars(preg_replace('/\;/i', ',', $val), ENT_QUOTES);
     }
 
     //@ ADDER FUNCTION
