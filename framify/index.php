@@ -141,7 +141,7 @@ if (@$command) {
 
             switch ($table) {
                 case 'routes':
-                    echo $proc->getRoutes();
+                    echo ($_REQUEST['id'] == null) ? $proc->getRoutes() : $proc->getRoute($_REQUEST['id'], $_REQUEST['byAssignment']);
                     exit;
                     break;
 

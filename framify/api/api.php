@@ -122,6 +122,8 @@ class DissertationAPI
     //=============================================================================
     public function getAssignment($assignmentId)
     {
+        $routesData = json_decode($this->getRoute($assignmentId, true), true);
+
         $assignmentQuery = "SELECT 
         assignment_id, assignment_name, assignment_owner, assignment_created, 
         assignment_due, assignment_summary, assignment_last_modified, assignment_notes,
@@ -131,9 +133,13 @@ class DissertationAPI
             ON 
                 assignments.assignment_owner = users.id
     WHERE 
-        assignments.assignment_id = {$assignmentId}";
-        $assignment_array = $this->c->printQueryResults($assignmentQuery, true, true);
-        return  is_array($assignment_array) == true ? $this->c->wrap(200, $assignment_array) : $assignment_array;
+        assignments.assignment_id = {$this->sanitize($assignmentId)};";
+
+        $assignment_array = $this->c->printQueryResults($assignmentQuery, true, false);
+        if (count($assignment_array) > 0) {
+            $assignment_array[0]["routes"] =  $routesData['data']['message'];
+        }
+        return  $this->c->wrapResponse(200, $assignment_array);
     }
 
 
@@ -142,8 +148,8 @@ class DissertationAPI
         $assignmentsQuery = "SELECT 
         assignment_id, assignment_name, assignment_owner, assignment_created, 
         assignment_due, assignment_summary, assignment_last_modified, assignment_notes,
-        users.name as assignment_owner_name, users.email as assignment_owner_email
-    FROM assignments 
+        users.name as assignment_owner_name, users.email as assignment_owner_email        
+            FROM assignments 
         LEFT JOIN users
             ON 
                 assignments.assignment_owner = users.id;";
@@ -166,6 +172,35 @@ class DissertationAPI
     //=============================================================================
     //# RULES
     //=============================================================================
+    public function getRoute($identifier, $IDisAssignment = false)
+    {
+        $IDisAssignment = $IDisAssignment ? 'rule_assignment' : 'rule_id';
+
+        $routesQuery = "
+        SELECT 
+        rule_id, rule_method, rule_path, rule_name, rule_description, rule_assignment , 
+            assignments.assignment_name,
+            assignments.assignment_owner,
+            id as assignment_owner_id, 
+            name as assignment_owner_name, 
+            email as rule_assignment_owner_email,
+            rule_expected_status_code, rule_expected_data_type, rule_expected_data, rule_headers, rule_parameters, rule_grading,
+            routes.created_at, routes.updated_at
+        FROM routes
+            LEFT JOIN assignments
+                ON assignments.assignment_id = routes.rule_assignment
+            JOIN users 
+                ON assignments.assignment_owner = users.id
+        WHERE {$IDisAssignment}={$this->sanitize($identifier)};
+        ";
+
+        $rules_list = ($this->c->printQueryResults($routesQuery, true, true));
+        return $rules_list;
+        // return  is_array($rules_list) ? $this->c->wrapResponse(200, $rules_list) : $rules_list;
+    }
+
+
+
     public function getRoutes()
     {
 
