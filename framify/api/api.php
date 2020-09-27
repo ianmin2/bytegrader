@@ -275,8 +275,8 @@ class DissertationAPI
 
     public function sanitize($val)
     {
-        // return (preg_replace('/\;/i', ',', $val));
-        return $this->sanitizeThoroughly($val);
+        return (preg_replace('/\;/i', ',', $val));
+        // return $this->sanitizeThoroughly($val);
     }
 
     public function sanitizeThoroughly($val)
