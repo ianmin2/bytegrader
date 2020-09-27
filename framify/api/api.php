@@ -133,7 +133,7 @@ class DissertationAPI
             ON 
                 assignments.assignment_owner = users.id
     WHERE 
-        assignments.assignment_id = {$this->sanitize($assignmentId)};";
+        assignments.assignment_id = {$this->sanitizeThoroughly($assignmentId)};";
 
         $assignment_array = $this->c->printQueryResults($assignmentQuery, true, false);
         if (count($assignment_array) > 0) {
@@ -191,7 +191,7 @@ class DissertationAPI
                 ON assignments.assignment_id = routes.rule_assignment
             JOIN users 
                 ON assignments.assignment_owner = users.id
-        WHERE {$IDisAssignment}={$this->sanitize($identifier)};
+        WHERE {$IDisAssignment}={$this->sanitizeThoroughly($identifier)};
         ";
 
         $rules_list = ($this->c->printQueryResults($routesQuery, true, true));
@@ -274,6 +274,12 @@ class DissertationAPI
     //=============================================================================
 
     public function sanitize($val)
+    {
+        // return (preg_replace('/\;/i', ',', $val));
+        return $this->sanitizeThoroughly($val);
+    }
+
+    public function sanitizeThoroughly($val)
     {
         return  htmlspecialchars(preg_replace('/\;/i', ',', $val), ENT_QUOTES);
     }
