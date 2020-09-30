@@ -356,10 +356,11 @@ class connection
     	 * If all the tables are to be backed up 
     	 * */
         if ($tables == '*') :
-
+            $i = 0;
             $tables = $this->query("SHOW TABLES", true);
             while ($table = $tables->fetch(PDO::FETCH_ASSOC)) {
                 $this->doStore($table, $i, $bkup_path, $bkup_path_all);
+                $i++;
             }
 
         else :
@@ -382,7 +383,7 @@ class connection
     /** 
      * PERFORM A COMPLETE DATABASE BACKUP
      */
-    public static function bkup_restore($keyer = NULL, $tables = '*', $bkpath = 'backup')
+    private  function bkup_restore($keyer = NULL, $tables = '*', $bkpath = 'backup')
     {
 
         /*
@@ -400,7 +401,7 @@ class connection
 	    		 * */
                 $tables = $this->query("SHOW TABLES", true);
                 while ($table = $tables->fetch(PDO::FETCH_ASSOC)) {
-                    $this->doRetore($table, $i, $bkpath);
+                    $this->doRestore($table, $i, $bkpath);
                 }
 
             else :

@@ -24,11 +24,12 @@ class DissertationAPI
         return $fieldData;
     }
 
-    private function getFieldNamesAndValues($fieldsData)
+    private function getFieldNamesAndValues($fieldsData, $updateString = false)
     {
 
         $keys   = [];
         $values = [];
+        $updateString = "";
 
         $field_names  = "(";
         $field_values = "(";
@@ -39,15 +40,21 @@ class DissertationAPI
                 array_push($keys, $key);
                 array_push($values, $value);
 
-                $field_names  .= $this->sanitize($key) . ",";
-                $field_values .=   ($key == 'password') ? "'{$value}'" :  "'" . $this->sanitize(is_array($value) ? json_encode($value) : $value) . "',";
+                $current_key = $this->sanitize($key) . ",";
+                $current_val =  ($key == 'password') ? "'{$value}'" :  "'" . $this->sanitize(is_array($value) ? json_encode($value) : $value) . "',";
+
+                if ($updateString) $updateString .= " {$current_key}=${current_val}";
+
+                $field_names  .= $current_key;
+                $field_values .=  $current_val;
             }
         }
 
         $field_names     = rtrim($field_names, ",") . ")";
         $field_values    = rtrim($field_values, ",") . ")";
+        $updateString    = rtrim($updateString, ",");
 
-        return ["keys" => $field_names, "values" => $field_values, "raw_keys" => $keys, "raw_values" => $values];
+        return ["keys" => $field_names, "values" => $field_values, "raw_keys" => $keys, "raw_values" => $values, 'update_string' => $updateString];
     }
 
     private function ensureExists($expected = [], $provided = [])
@@ -77,13 +84,15 @@ class DissertationAPI
 
         $processed_values = $this->getFieldNamesAndValues($userData);
 
+        $procesed_email = $this->sanitize($userData['email']);
+
         //@ Encrypt the provided password [if one is defined]
         // return $this->c->makeResponse(200, $userData);
         // return $this->c->makeResponse(200, "INSERT INTO users {$processed_values['keys']} VALUES {$processed_values['values']}");
         $this->c->aQuery("INSERT INTO users {$processed_values['keys']} VALUES {$processed_values['values']}", true, " User registered.", "User Registration Failed!");
 
         //@ Fetch the newly inserted user data [inefficient I know but it ain't fun re-doing a project from scratch; was previously using an ORM with laravel]
-        $specificData = $this->c->printQueryResults("SELECT id,name,email,username,user_active,user_last_seen,created_at FROM users WHERE email='{$userData['email']}' OR username='{$userData['email']}'");
+        $specificData = $this->c->printQueryResults("SELECT id,name,email,username,user_active,user_last_seen,created_at FROM users WHERE email='{$procesed_email}' OR username='{$procesed_email}'");
         if (is_array($specificData)) $specificData = $specificData[0];
 
         //@ Update the "last seen" field
@@ -117,6 +126,33 @@ class DissertationAPI
         return $this->c->wrap($this->generateToken($matchingUsers));
     }
 
+    public function updateUser($userData)
+    {
+        if ($userData['id']) {
+
+            //@ Encrypt the provided password [if one is defined]
+            $userData['password'] = $userData['password'] ? password_hash($this->sanitize($userData['password']), PASSWORD_DEFAULT) : null;
+
+            $processed_values = $this->getFieldNamesAndValues($userData, true);
+
+            //@ Perform the actual update
+            $this->c->aQuery("UPDATE users SET {$processed_values['update_string']} WHERE id='{$this->sanitizeThoroughly($userData['id'])}'", true, " User updated.", "User update Failed!");
+
+            //@ Fetch the newly updated user data [inefficient ...yeah, yeah; as I said was previously using an ORM with laravel and this [complete assignment redo]  is nothing short of outright annoying and unnecessary]
+            $specificData = $this->c->printQueryResults("SELECT id,name,email,username,user_active,user_last_seen,created_at FROM users WHERE id='{$this->sanitizeThoroughly($userData['id'])}';");
+            if (is_array($specificData)) $specificData = $specificData[0];
+
+            //@ Update the "last seen" field
+            $this->c->query("Update users set user_last_seen=getdate() WHERE id=" . $specificData["id"] . ";");
+
+            //@ return the JWT token [where applicable]
+            return $this->c->wrap($this->generateToken($specificData));
+        } else {
+            //@ Ask the users to improve themselves
+            return $this->c->wrapResponse(401, "No such user exists!");
+        }
+    }
+
     //=============================================================================
     //# ASSIGNMENTS
     //=============================================================================
@@ -128,11 +164,11 @@ class DissertationAPI
         assignment_id, assignment_name, assignment_owner, assignment_created, 
         assignment_due, assignment_summary, assignment_last_modified, assignment_notes,
         users.name as assignment_owner_name, users.email as assignment_owner_email
-    FROM assignments 
-        LEFT JOIN users
-            ON 
-                assignments.assignment_owner = users.id
-    WHERE 
+        FROM assignments 
+            LEFT JOIN users
+                ON 
+                    assignments.assignment_owner = users.id
+        WHERE 
         assignments.assignment_id = {$this->sanitizeThoroughly($assignmentId)};";
 
         $assignment_array = $this->c->printQueryResults($assignmentQuery, true, false);
@@ -166,6 +202,23 @@ class DissertationAPI
         if (@$processed_values["raw_keys"][0] == null) die($this->c->wrapResponse(412, "Not enough assignment data."));
 
         return ($this->c->aQuery("INSERT INTO assignments {$processed_values['keys']} VALUES {$processed_values['values']};", true, " Assignment Added.", "Assignment Addition Failed!"));
+    }
+
+    public function updateAssignment($updateData)
+    {
+        if ($updateData['assignment_id']) {
+
+            //@ Encrypt the provided password [if one is defined]
+            if ($updateData['password']) $updateData['password'] =  password_hash($this->sanitize($updateData['password']), PASSWORD_DEFAULT);
+
+            $processed_values = $this->getFieldNamesAndValues($updateData, true);
+
+            //@ Perform the actual update
+            return $this->c->aQuery("UPDATE assignments SET {$processed_values['update_string']} WHERE assignment_id='{$this->sanitizeThoroughly($updateData['assignment_id'])}'", true, " Assignment updated.", "Assignment update Failed!");
+        } else {
+            //@ Ask the requesting user[s] to improve themselves
+            return $this->c->wrapResponse(401, "No such assignment exists!");
+        }
     }
 
 
@@ -236,6 +289,23 @@ class DissertationAPI
         return ($this->c->aQuery("INSERT INTO routes {$processed_values['keys']} VALUES {$processed_values['values']}", true, "Assignment Rule registered.", "Failed to register the assignment rule!"));
     }
 
+    public function updateRoute($updateData)
+    {
+        if ($updateData['route_id']) {
+
+            //@ Encrypt the provided password [if one is defined]
+            if ($updateData['password']) $updateData['password'] =  password_hash($this->sanitize($updateData['password']), PASSWORD_DEFAULT);
+
+            $processed_values = $this->getFieldNamesAndValues($updateData, true);
+
+            //@ Perform the actual update
+            return $this->c->aQuery("UPDATE routes SET {$processed_values['update_string']} WHERE route_id='{$this->sanitizeThoroughly($updateData['route_id'])}'", true, " Route updated.", "Route update Failed!");
+        } else {
+            //@ Ask the requesting user[s] to improve themselves
+            return $this->c->wrapResponse(401, "No such route rule exists!");
+        }
+    }
+
 
     //=============================================================================
     //# CHAINING
@@ -250,6 +320,23 @@ class DissertationAPI
     {
         $processed_values = $this->getFieldNamesAndValues($chainingData);
         return ($this->c->aQuery("INSERT INTO chainings {$processed_values['keys']} VALUES {$processed_values['values']}", true, "Assignment Chaining Added.", "Failed to records assignment chaining!"));
+    }
+
+    public function updateChaining($updateData)
+    {
+        if ($updateData['chaining_id']) {
+
+            //@ Encrypt the provided password [if one is defined]
+            if ($updateData['password']) $updateData['password'] =  password_hash($this->sanitize($updateData['password']), PASSWORD_DEFAULT);
+
+            $processed_values = $this->getFieldNamesAndValues($updateData, true);
+
+            //@ Perform the actual update
+            return $this->c->aQuery("UPDATE chainings SET {$processed_values['update_string']} WHERE chaining_id='{$this->sanitizeThoroughly($updateData['chaining_id'])}'", true, " Assignment chaining updated.", "Assignment chaining update Failed!");
+        } else {
+            //@ Ask the requesting user[s] to improve themselves
+            return $this->c->wrapResponse(401, "No such assignment chaining exists!");
+        }
     }
 
     //=============================================================================
@@ -267,6 +354,22 @@ class DissertationAPI
     }
 
 
+    public function updateAttempt($updateData)
+    {
+        if ($updateData['attempt_id']) {
+
+            //@ Encrypt the provided password [if one is defined]
+            if ($updateData['password']) $updateData['password'] =  password_hash($this->sanitize($updateData['password']), PASSWORD_DEFAULT);
+
+            $processed_values = $this->getFieldNamesAndValues($updateData, true);
+
+            //@ Perform the actual update
+            return $this->c->aQuery("UPDATE attempts SET {$processed_values['update_string']} WHERE attempt_id='{$this->sanitizeThoroughly($updateData['attempt_id'])}'", true, " Assignment attempt updated.", "Assignment attempt update Failed!");
+        } else {
+            //@ Ask the requesting user[s] to improve themselves
+            return $this->c->wrapResponse(401, "No such assignment attempt exists!");
+        }
+    }
 
 
     //=============================================================================
@@ -333,7 +436,7 @@ class DissertationAPI
 
         $table      = $countData["table"];
         $extras     = @$countData["extras"];
-        $specifics    = (@$getData["specifics"] != NULL) ? $getData["specifics"] : "*";
+        $specifics    = (@$countData["specifics"] != NULL) ? $countData["specifics"] : "*";
 
         unset($countData["table"]);
         unset($countData["extras"]);

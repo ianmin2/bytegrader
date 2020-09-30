@@ -95,7 +95,7 @@ ALTER TABLE [dbo].[routes] ADD DEFAULT  GETDATE() FOR [created_at];
 ---  CHAININGS
 
 CREATE TABLE [dbo].[chainings](
-	[id] [bigint] IDENTITY(1,1) NOT NULL,
+	[chaining_id] [bigint] IDENTITY(1,1) NOT NULL,
 	[chaining_assignment] [bigint] NOT NULL,
 	[chaining_depends_on] [bigint] NULL,
 	[chaining_type] [nvarchar](255) NOT NULL,
