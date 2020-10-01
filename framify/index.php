@@ -67,6 +67,7 @@ unset($_REQUEST["command"]);
 unset($_REQUEST["callback"]);
 unset($_REQUEST["_"]);
 unset($_REQUEST["token"]);
+unset($_REQUEST["buttons"]);
 
 
 if (@$command) {
