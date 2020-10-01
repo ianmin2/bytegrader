@@ -78,7 +78,7 @@ if (@$command) {
 
     switch ($command) {
 
-            //# ADDER HANDLER
+            //# ADDITION HANDLER
         case 'add':
             switch ($table) {
 
@@ -125,6 +125,53 @@ if (@$command) {
             break;
 
             //# SIMPLE COUNTER FUNCTION 
+
+            //# DATA UPDATE HANDLER
+        case 'update':
+            switch ($table) {
+
+                case 'user':
+                    //@ Update a user
+                    unset($_REQUEST["table"]);
+                    echo $proc->updateUser($_REQUEST);
+                    exit;
+                    break;
+
+                case 'assignment':
+                    //@ Update an assignment 
+                    unset($_REQUEST["table"]);
+                    echo $proc->updateAssignment($_REQUEST);
+                    exit;
+                    break;
+
+                case 'rule':
+                    //@ Update an assignment ruleset 
+                    unset($_REQUEST["table"]);
+                    echo $proc->updateRoute($_REQUEST);
+                    exit;
+                    break;
+
+                case 'chaining':
+                    //@ Update an assignment chaining 
+                    echo $proc->updateChaining($_REQUEST);
+                    exit;
+                    break;
+
+                case 'attempt':
+                    //@ Update an assignment attempt record
+                    echo $proc->updateAttempt($_REQUEST);
+                    exit;
+                    break;
+
+                default:
+                    #//@ Give a generic failure message
+                    echo '{"response":404, "data": {"message": "Could not find the referenced update resource."}}';
+                    exit;
+                    break;
+            }
+
+            break;
+
 
         case 'count':
             echo $proc->countFunc($_REQUEST);
