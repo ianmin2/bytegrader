@@ -158,6 +158,7 @@ class DissertationAPI
     //=============================================================================
     public function getAssignment($assignmentId)
     {
+
         $routesData = json_decode($this->getRoute($assignmentId, true), true);
 
         $assignmentQuery = "SELECT 
