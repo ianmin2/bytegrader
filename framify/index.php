@@ -165,7 +165,7 @@ if (@$command) {
 
                 default:
                     #//@ Give a generic failure message
-                    echo '{"response":404, "data": {"message": "Could not find the referenced update resource."}}';
+                    echo $proc->c->wrapResponse(404, "Could not find the referenced update resource.", $_REQUEST);
                     exit;
                     break;
             }

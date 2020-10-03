@@ -24,9 +24,8 @@ class DissertationAPI
         return $fieldData;
     }
 
-    private function getFieldNamesAndValues($fieldsData, $updateString = false)
+    private function getFieldNamesAndValues($fieldsData, $returnUpdateString = false)
     {
-
         $keys   = [];
         $values = [];
         $updateString = "";
@@ -43,7 +42,7 @@ class DissertationAPI
                 $current_key = $this->sanitize($key) . ",";
                 $current_val =  ($key == 'password') ? "'{$value}'" :  "'" . $this->sanitize(is_array($value) ? json_encode($value) : $value) . "',";
 
-                if ($updateString) $updateString .= " {$current_key}=${current_val}";
+                if ($returnUpdateString) $updateString .= " {$this->sanitize($key)}=${current_val}";
 
                 $field_names  .= $current_key;
                 $field_values .=  $current_val;
@@ -130,13 +129,16 @@ class DissertationAPI
     {
         if ($userData['id']) {
 
+            $update_id = $userData['id'];
+            unset($userData['id']);
+
             //@ Encrypt the provided password [if one is defined]
             $userData['password'] = $userData['password'] ? password_hash($this->sanitize($userData['password']), PASSWORD_DEFAULT) : null;
 
             $processed_values = $this->getFieldNamesAndValues($userData, true);
 
             //@ Perform the actual update
-            $this->c->aQuery("UPDATE users SET {$processed_values['update_string']} WHERE id='{$this->sanitizeThoroughly($userData['id'])}'", true, " User updated.", "User update Failed!");
+            $this->c->aQuery("UPDATE users SET {$processed_values['update_string']} WHERE id='{$this->sanitizeThoroughly($update_id)}'", true, " User updated.", "User update Failed!");
 
             //@ Fetch the newly updated user data [inefficient ...yeah, yeah; as I said was previously using an ORM with laravel and this [complete assignment redo]  is nothing short of outright annoying and unnecessary]
             $specificData = $this->c->printQueryResults("SELECT id,name,email,username,user_active,user_last_seen,created_at FROM users WHERE id='{$this->sanitizeThoroughly($userData['id'])}';");
@@ -209,13 +211,16 @@ class DissertationAPI
     {
         if ($updateData['assignment_id']) {
 
+            $update_id = $updateData['assignment_id'];
+            unset($updateData['assignment_id']);
+
             //@ Encrypt the provided password [if one is defined]
             if ($updateData['password']) $updateData['password'] =  password_hash($this->sanitize($updateData['password']), PASSWORD_DEFAULT);
 
             $processed_values = $this->getFieldNamesAndValues($updateData, true);
 
             //@ Perform the actual update
-            return $this->c->aQuery("UPDATE assignments SET {$processed_values['update_string']} WHERE assignment_id='{$this->sanitizeThoroughly($updateData['assignment_id'])}'", true, " Assignment updated.", "Assignment update Failed!");
+            return $this->c->aQuery("UPDATE assignments SET {$processed_values['update_string']} WHERE assignment_id='{$this->sanitizeThoroughly($update_id)}'", true, " Assignment updated.", "Assignment update Failed!");
         } else {
             //@ Ask the requesting user[s] to improve themselves
             return $this->c->wrapResponse(401, "No such assignment exists!");
@@ -294,13 +299,16 @@ class DissertationAPI
     {
         if ($updateData['route_id']) {
 
+            $update_id = $updateData['route_id'];
+            unset($updateData['route_id']);
+
             //@ Encrypt the provided password [if one is defined]
             if ($updateData['password']) $updateData['password'] =  password_hash($this->sanitize($updateData['password']), PASSWORD_DEFAULT);
 
             $processed_values = $this->getFieldNamesAndValues($updateData, true);
 
             //@ Perform the actual update
-            return $this->c->aQuery("UPDATE routes SET {$processed_values['update_string']} WHERE route_id='{$this->sanitizeThoroughly($updateData['route_id'])}'", true, " Route updated.", "Route update Failed!");
+            return $this->c->aQuery("UPDATE routes SET {$processed_values['update_string']} WHERE route_id='{$this->sanitizeThoroughly($update_id)}'", true, " Route updated.", "Route update Failed!");
         } else {
             //@ Ask the requesting user[s] to improve themselves
             return $this->c->wrapResponse(401, "No such route rule exists!");
@@ -327,13 +335,16 @@ class DissertationAPI
     {
         if ($updateData['chaining_id']) {
 
+            $update_id = $updateData['chaining_id'];
+            unset($updateData['chaining_id']);
+
             //@ Encrypt the provided password [if one is defined]
             if ($updateData['password']) $updateData['password'] =  password_hash($this->sanitize($updateData['password']), PASSWORD_DEFAULT);
 
             $processed_values = $this->getFieldNamesAndValues($updateData, true);
 
             //@ Perform the actual update
-            return $this->c->aQuery("UPDATE chainings SET {$processed_values['update_string']} WHERE chaining_id='{$this->sanitizeThoroughly($updateData['chaining_id'])}'", true, " Assignment chaining updated.", "Assignment chaining update Failed!");
+            return $this->c->aQuery("UPDATE chainings SET {$processed_values['update_string']} WHERE chaining_id='{$this->sanitizeThoroughly($update_id)}'", true, " Assignment chaining updated.", "Assignment chaining update Failed!");
         } else {
             //@ Ask the requesting user[s] to improve themselves
             return $this->c->wrapResponse(401, "No such assignment chaining exists!");
@@ -359,13 +370,16 @@ class DissertationAPI
     {
         if ($updateData['attempt_id']) {
 
+            $update_id = $updateData['attempt_id'];
+            unset($updateData['attempt_id']);
+
             //@ Encrypt the provided password [if one is defined]
             if ($updateData['password']) $updateData['password'] =  password_hash($this->sanitize($updateData['password']), PASSWORD_DEFAULT);
 
             $processed_values = $this->getFieldNamesAndValues($updateData, true);
 
             //@ Perform the actual update
-            return $this->c->aQuery("UPDATE attempts SET {$processed_values['update_string']} WHERE attempt_id='{$this->sanitizeThoroughly($updateData['attempt_id'])}'", true, " Assignment attempt updated.", "Assignment attempt update Failed!");
+            return $this->c->aQuery("UPDATE attempts SET {$processed_values['update_string']} WHERE attempt_id='{$this->sanitizeThoroughly($update_id)}'", true, " Assignment attempt updated.", "Assignment attempt update Failed!");
         } else {
             //@ Ask the requesting user[s] to improve themselves
             return $this->c->wrapResponse(401, "No such assignment attempt exists!");
