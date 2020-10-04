@@ -297,10 +297,10 @@ class DissertationAPI
 
     public function updateRoute($updateData)
     {
-        if ($updateData['route_id']) {
+        if ($updateData['rule_id']) {
 
-            $update_id = $updateData['route_id'];
-            unset($updateData['route_id']);
+            $update_id = $updateData['rule_id'];
+            unset($updateData['rule_id']);
 
             //@ Encrypt the provided password [if one is defined]
             if ($updateData['password']) $updateData['password'] =  password_hash($this->sanitize($updateData['password']), PASSWORD_DEFAULT);
@@ -308,7 +308,7 @@ class DissertationAPI
             $processed_values = $this->getFieldNamesAndValues($updateData, true);
 
             //@ Perform the actual update
-            return $this->c->aQuery("UPDATE routes SET {$processed_values['update_string']} WHERE route_id='{$this->sanitizeThoroughly($update_id)}'", true, " Route updated.", "Route update Failed!");
+            return $this->c->aQuery("UPDATE routes SET {$processed_values['update_string']} WHERE rule_id='{$this->sanitizeThoroughly($update_id)}'", true, " Route updated.", "Route update Failed!");
         } else {
             //@ Ask the requesting user[s] to improve themselves
             return $this->c->wrapResponse(401, "No such route rule exists!");

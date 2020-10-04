@@ -241,6 +241,7 @@ class connection
     public final function ctr($table)
     {
         $rsp = $this->query("Select count(*) as total FROM $table", true)->fetch(PDO::FETCH_ASSOC);
+        $rsp["table"] = $table;
         return $this->wrapResponse(200, $rsp);
     }
 
