@@ -238,6 +238,12 @@ class connection
         return $elements;
     }
 
+    public final function ctr($table)
+    {
+        $rsp = $this->query("Select count(*) as total FROM $table", true)->fetch(PDO::FETCH_ASSOC);
+        return $this->wrapResponse(200, $rsp);
+    }
+
 
     /**
      *  THE NUMBER OF ROWS ENUMERATOR

@@ -174,9 +174,44 @@ if (@$command) {
 
 
         case 'count':
-            echo $proc->countFunc($_REQUEST);
-            exit;
-            break;
+            switch ($table) {
+
+                case 'users':
+                    //@ Count users
+                    echo $proc->c->ctr($table);
+                    exit;
+                    break;
+
+                case 'assignments':
+                    //@ Count existing assignments
+                    echo $proc->c->ctr($table);
+                    exit;
+                    break;
+
+                case 'routes':
+                    //@ Count defined rules
+                    echo $proc->c->ctr($table);
+                    exit;
+                    break;
+
+                case 'chainings':
+                    //@ Count the existing assignment chaining 
+                    echo $proc->c->ctr($table);
+                    exit;
+                    break;
+
+                case 'attempts':
+                    //@ Count assignment attempt records
+                    echo $proc->c->ctr($table);
+                    exit;
+                    break;
+
+                default:
+                    #//@ Give a generic failure message
+                    echo '{"response":404, "data": {"message": "Could not find the referenced count resource."}}';
+                    exit;
+                    break;
+            }
 
         case "auth":
             $creds = $proc->loginUser($_REQUEST);
