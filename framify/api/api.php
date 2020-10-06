@@ -132,6 +132,9 @@ class DissertationAPI
             $update_id = $userData['id'];
             unset($userData['id']);
 
+            //@ Update the updated at field
+            $userData['updated_at'] = date(DATE_ATOM);
+
             //@ Encrypt the provided password [if one is defined]
             $userData['password'] = $userData['password'] ? password_hash($this->sanitize($userData['password']), PASSWORD_DEFAULT) : null;
 
@@ -213,6 +216,10 @@ class DissertationAPI
 
             $update_id = $updateData['assignment_id'];
             unset($updateData['assignment_id']);
+
+            //@ Update the updated at field
+            $updateData['assignment_last_modified'] = date(DATE_ATOM);
+
 
             //@ Encrypt the provided password [if one is defined]
             if ($updateData['password']) $updateData['password'] =  password_hash($this->sanitize($updateData['password']), PASSWORD_DEFAULT);
@@ -302,6 +309,10 @@ class DissertationAPI
             $update_id = $updateData['rule_id'];
             unset($updateData['rule_id']);
 
+            //@ Update the updated at field
+            $updateData['updated_at'] = date(DATE_ATOM);
+
+
             //@ Encrypt the provided password [if one is defined]
             if ($updateData['password']) $updateData['password'] =  password_hash($this->sanitize($updateData['password']), PASSWORD_DEFAULT);
 
@@ -338,6 +349,10 @@ class DissertationAPI
             $update_id = $updateData['chaining_id'];
             unset($updateData['chaining_id']);
 
+            //@ Update the updated at field
+            $updateData['updated_at'] = date(DATE_ATOM);
+
+
             //@ Encrypt the provided password [if one is defined]
             if ($updateData['password']) $updateData['password'] =  password_hash($this->sanitize($updateData['password']), PASSWORD_DEFAULT);
 
@@ -373,6 +388,9 @@ class DissertationAPI
             $update_id = $updateData['attempt_id'];
             unset($updateData['attempt_id']);
 
+            //@ Update the updated at field
+            $updateData['updated_at'] = date(DATE_ATOM);
+
             //@ Encrypt the provided password [if one is defined]
             if ($updateData['password']) $updateData['password'] =  password_hash($this->sanitize($updateData['password']), PASSWORD_DEFAULT);
 
@@ -393,7 +411,9 @@ class DissertationAPI
 
     public function sanitize($val)
     {
-        return (preg_replace('/\;/i', ',', $val));
+        $val = (preg_replace('/\;/i', ',', $val));
+        $val = preg_replace("/'/i", "&apos;", $val);
+        return $val;
         // return $this->sanitizeThoroughly($val);
     }
 

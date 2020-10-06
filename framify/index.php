@@ -70,11 +70,16 @@ unset($_REQUEST["token"]);
 unset($_REQUEST["buttons"]);
 
 
+
+
 if (@$command) {
 
     include __DIR__ . "/api/api.php";
 
     $proc = new DissertationAPI($connection);
+
+    // echo $proc->c->wrapResponse(500, "Tested death!");
+    // exit;
 
     switch ($command) {
 
