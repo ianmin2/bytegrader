@@ -371,7 +371,7 @@ class DissertationAPI
     //=============================================================================
     public function getAttempts()
     {
-        return ($this->c->printQueryResults("SELECT * FROM attempts;"));
+        return ($this->c->printQueryResults("SELECT * FROM attempts;", true, true));
     }
 
     public function addAttempt($attemptData)

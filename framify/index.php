@@ -110,12 +110,14 @@ if (@$command) {
 
                 case 'chaining':
                     //@ Add a new assignment chaining 
+                    unset($_REQUEST["table"]);
                     echo $proc->addChaining($_REQUEST);
                     exit;
                     break;
 
                 case 'attempt':
                     //@ Add a new assignment attempt record
+                    unset($_REQUEST["table"]);
                     echo $proc->addAttempt($_REQUEST);
                     exit;
                     break;
@@ -158,12 +160,14 @@ if (@$command) {
 
                 case 'chaining':
                     //@ Update an assignment chaining 
+                    unset($_REQUEST["table"]);
                     echo $proc->updateChaining($_REQUEST);
                     exit;
                     break;
 
                 case 'attempt':
                     //@ Update an assignment attempt record
+                    unset($_REQUEST["table"]);
                     echo $proc->updateAttempt($_REQUEST);
                     exit;
                     break;
