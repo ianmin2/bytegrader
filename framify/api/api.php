@@ -40,7 +40,18 @@ class DissertationAPI
                 array_push($values, $value);
 
                 $current_key = $this->sanitize($key) . ",";
-                $current_val =  ($key == 'password') ? "'{$value}'" :  "'" . $this->sanitize(is_array($value) ? json_encode($value) : $value) . "',";
+                $current_val =  ($key == 'password')
+                    ?
+                    "'{$value}'"
+                    : ($key == "updated_at" || $key == "assignment_last_modified")
+                    ?
+                    "getdate()"
+                    :
+                    "'" . $this->sanitize(is_array($value)
+                        ?
+                        json_encode($value)
+                        :
+                        $value) . "',";
 
                 if ($returnUpdateString) $updateString .= " {$this->sanitize($key)}=${current_val}";
 
@@ -133,7 +144,7 @@ class DissertationAPI
             unset($userData['id']);
 
             //@ Update the updated at field
-            $userData['updated_at'] = date(DATE_ATOM);
+            $userData['updated_at'] = 'getdate()';
 
             //@ Encrypt the provided password [if one is defined]
             $userData['password'] = $userData['password'] ? password_hash($this->sanitize($userData['password']), PASSWORD_DEFAULT) : null;
@@ -218,7 +229,7 @@ class DissertationAPI
             unset($updateData['assignment_id']);
 
             //@ Update the updated at field
-            $updateData['assignment_last_modified'] = date(DATE_ATOM);
+            $updateData['assignment_last_modified'] = 'getdate()';
 
 
             //@ Encrypt the provided password [if one is defined]
@@ -310,7 +321,7 @@ class DissertationAPI
             unset($updateData['rule_id']);
 
             //@ Update the updated at field
-            $updateData['updated_at'] = date(DATE_ATOM);
+            $updateData['updated_at'] = 'getdate()';
 
 
             //@ Encrypt the provided password [if one is defined]
@@ -350,7 +361,7 @@ class DissertationAPI
             unset($updateData['chaining_id']);
 
             //@ Update the updated at field
-            $updateData['updated_at'] = date(DATE_ATOM);
+            $updateData['updated_at'] = 'getdate()';
 
 
             //@ Encrypt the provided password [if one is defined]
@@ -389,7 +400,7 @@ class DissertationAPI
             unset($updateData['attempt_id']);
 
             //@ Update the updated at field
-            $updateData['updated_at'] = date(DATE_ATOM);
+            $updateData['updated_at'] = 'getdate()';
 
             //@ Encrypt the provided password [if one is defined]
             if ($updateData['password']) $updateData['password'] =  password_hash($this->sanitize($updateData['password']), PASSWORD_DEFAULT);

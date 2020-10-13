@@ -41,7 +41,10 @@ CREATE TABLE [dbo].[assignments](
 	[assignment_summary] [nvarchar](max) NULL,
 	[assignment_notes] [nvarchar](max) NULL,
 	[assignment_created] [datetimeoffset](7) NOT NULL,
-	[assignment_last_modified] [datetimeoffset](7)
+	[assignment_last_modified] [datetimeoffset](7),
+	CONSTRAINT valid_assignment_owner_required
+    FOREIGN KEY (assignment_owner)
+    REFERENCES users (id)
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY];
 
 
@@ -77,7 +80,10 @@ CREATE TABLE [dbo].[routes](
 	[rule_parameters] [nvarchar](max) NULL,
 	[rule_grading] [nvarchar](max) NOT NULL,
 	[created_at] [datetimeoffset](7) NULL,
-	[updated_at] [datetimeoffset](7) NULL
+	[updated_at] [datetimeoffset](7) NULL,
+	CONSTRAINT valid_route_assignment_required
+    FOREIGN KEY (rule_assignment)
+    REFERENCES assignments (assignment_id)
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY];
 
 ALTER TABLE [dbo].[routes] ADD PRIMARY KEY CLUSTERED 
@@ -98,15 +104,22 @@ CREATE TABLE [dbo].[chainings](
 	[chaining_id] [bigint] IDENTITY(1,1) NOT NULL,
 	[chaining_assignment] [bigint] NOT NULL,
 	[chaining_depends_on] [bigint] NULL,
+	[chaining_parent] [bigint] NULL,
 	[chaining_type] [nvarchar](255) NOT NULL,
 	[chaining_rules] [nvarchar](255) NOT NULL,
 	[created_at] [datetime] NULL,
-	[updated_at] [datetime] NULL
+	[updated_at] [datetime] NULL,
+	CONSTRAINT valid_assignment_required
+    FOREIGN KEY (chaining_assignment)
+    REFERENCES assignments (assignment_id),
+	CONSTRAINT valid_parent_assignment_required
+    FOREIGN KEY (chaining_depends_on)
+    REFERENCES assignments (assignment_id)
 ) ON [PRIMARY];
 
 ALTER TABLE [dbo].[chainings] ADD PRIMARY KEY CLUSTERED 
 (
-	[id] ASC
+	[chaining_id] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY];
 
 ALTER TABLE [dbo].[chainings] ADD DEFAULT  GETDATE() FOR [created_at];
@@ -124,9 +137,12 @@ CREATE TABLE [dbo].[attempts](
 	[attempt_grading_time] [nvarchar](255) NULL,
 	[attempt_grade_breakdown] [nvarchar](255) NULL,
 	[attempt_grade_complete] [bit] NULL,
-	[attempt_assignment] [nvarchar](255) NOT NULL,
+	[attempt_assignment] [bigint] NOT NULL,
 	[created_at] [datetime] NULL,
-	[updated_at] [datetime] NULL
+	[updated_at] [datetime] NULL,
+	CONSTRAINT valid_attempt_assignment_required
+    FOREIGN KEY (attempt_assignment)
+    REFERENCES assignments (assignment_id)
 ) ON [PRIMARY];
 
 ALTER TABLE [dbo].[attempts] ADD PRIMARY KEY CLUSTERED 
