@@ -7,7 +7,6 @@ use GuzzleHttp\Client;
 //@ Create a re-usable remote-query runner for the grader
 class GradeRouter
 {
-
     private $base_url;
     private $client;
 
@@ -27,11 +26,10 @@ class GradeRouter
            $responseObject["response"] =[ "error" => true,  "object" => $th,  "message" =>  $th->__toString(), "response" => $response];
         }
        
-    }
-
-    
+    }    
 }
 
 
-$graderObj = new GradeRouter("https://bixbyte.io");
+// $graderObj = new GradeRouter("https://bixbyte.io");
+// $graderObj->call("GET","/",["parameters" => ""],"call_type");
 

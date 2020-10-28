@@ -249,7 +249,19 @@ class DissertationAPI
     //=============================================================================
     //# RULES
     //=============================================================================
-    public function getRoute($identifier, $IDisAssignment = false)
+
+    private function filterByParameter($paramName,$paramValue, $matches = false)
+    { 
+        return function($rule) use ($paramName,$paramValue, $matches){           
+           return $matches ? $rule[$paramName] != $paramValue : $rule[$paramName] == $paramValue ;
+        };
+    }
+
+    private function unwrap($obj){        
+        return json_decode($obj,true)["data"]["message"];
+    }
+
+    public function getRoute($identifier, $IDisAssignment = false, $grouped = false)
     {
         $IDisAssignment = $IDisAssignment ? 'rule_assignment' : 'rule_id';
 
@@ -272,7 +284,12 @@ class DissertationAPI
         ";
 
         $rules_list = ($this->c->printQueryResults($routesQuery, true, true));
-        return $rules_list;
+        if(!$grouped) return $rules_list;
+        $filterForForeignRules = $this->filterByParameter($IDisAssignment,$identifier,true);
+        $foreign_rules = $this->getRoutes();
+        $foreign_rules = array_filter($this->unwrap($foreign_rules), $filterForForeignRules);
+        return $this->c->wrapResponse(200,["owned" => $this->unwrap($rules_list), "public"=> $foreign_rules ]);
+
         // return  is_array($rules_list) ? $this->c->wrapResponse(200, $rules_list) : $rules_list;
     }
 
