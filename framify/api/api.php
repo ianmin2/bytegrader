@@ -257,6 +257,21 @@ class DissertationAPI
         };
     }
 
+    private function addParameterToArray($haystack,$paramName="",$paramValue){
+        for ($i=0; $i < count($haystack); $i++) { 
+           $haystack[$i][$paramName] = $paramValue;            
+        }
+        return $haystack;
+    }
+
+    private function getParameterValuesAsArray($haystack=[], $paramName=""){
+        $result_array = [];
+        for ($i=0; $i < count($haystack); $i++) { 
+            array_push($result_array,$haystack[$i][$paramName]);            
+        }
+        return $result_array;
+    }
+
     private function unwrap($obj){        
         return json_decode($obj,true)["data"]["message"];
     }
@@ -287,8 +302,11 @@ class DissertationAPI
         if(!$grouped) return $rules_list;
         $filterForForeignRules = $this->filterByParameter($IDisAssignment,$identifier,true);
         $foreign_rules = $this->getRoutes();
-        $foreign_rules = array_filter($this->unwrap($foreign_rules), $filterForForeignRules);
-        return $this->c->wrapResponse(200,["owned" => $this->unwrap($rules_list), "public"=> $foreign_rules ]);
+        $foreign_rules = $this->addParameterToArray($this->unwrap($foreign_rules), "parent_rules", []);
+        $rules_list    = $this->addParameterToArray($this->unwrap($rules_list), "parent_rules", []);
+        $all_rule_ids = $this->getParameterValuesAsArray( $foreign_rules, "rule_id");
+        $foreign_rules = array_filter($foreign_rules, $filterForForeignRules);
+        return $this->c->wrapResponse(200,["owned" => $rules_list, "public"=> $foreign_rules, "ids" => $all_rule_ids ]);
 
         // return  is_array($rules_list) ? $this->c->wrapResponse(200, $rules_list) : $rules_list;
     }
