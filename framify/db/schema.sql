@@ -106,7 +106,7 @@ CREATE TABLE [dbo].[chainings](
 	[chaining_depends_on] [bigint] NULL,
 	[chaining_parent] [bigint] NULL,
 	[chaining_type] [nvarchar](255) NOT NULL,
-	[chaining_rules] [nvarchar](255) NOT NULL,
+	[chaining_rules] [nvarchar](MAX) NOT NULL,
 	[created_at] [datetime] NULL,
 	[updated_at] [datetime] NULL,
 	CONSTRAINT valid_assignment_required
