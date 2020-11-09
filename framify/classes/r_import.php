@@ -6,7 +6,7 @@
 	
 	*/
 
-	include("r_connection.php");
+	include(__DIR__."r_connection.php");
 	
 	$conn = new connection($_REQUEST['db'],$_REQUEST['host'],$_REQUEST['user'],$_REQUEST['pass'],$_REQUEST['callback']);
 	

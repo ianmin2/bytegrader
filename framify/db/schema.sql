@@ -106,7 +106,7 @@ CREATE TABLE [dbo].[chainings](
 	[chaining_depends_on] [bigint] NULL,
 	[chaining_parent] [bigint] NULL,
 	[chaining_type] [nvarchar](255) NOT NULL,
-	[chaining_rules] [nvarchar](MAX) NOT NULL,
+	[chaining_rules] [text]NOT NULL,
 	[created_at] [datetime] NULL,
 	[updated_at] [datetime] NULL,
 	CONSTRAINT valid_assignment_required
@@ -153,3 +153,19 @@ ALTER TABLE [dbo].[attempts] ADD PRIMARY KEY CLUSTERED
 ALTER TABLE [dbo].[attempts] ADD  DEFAULT ('0') FOR [attempt_grade_complete];
 ALTER TABLE [dbo].[attempts] ADD DEFAULT  GETDATE() FOR [attempt_submission_time];
 ALTER TABLE [dbo].[attempts] ADD DEFAULT  GETDATE() FOR [created_at];
+
+
+--- #####################################################################################################################
+
+--- ERRORS
+
+CREATE TABLE [dbo].[errors](
+	[error_id] [bigint] IDENTITY(1,1) NOT NULL,
+	[error_assignment] [bigint] NOT NULL,
+	[error_chaining] [bigint] NULL,
+	[error_message] [text] NULL,
+	[created_at] [datetime] NULL DEFAULT GETDATE(),
+	[updated_at] [datetime] NULL,
+	CONSTRAINT valid_error_assignment_required FOREIGN KEY (error_assignment) REFERENCES assignments (assignment_id),
+	CONSTRAINT valid_error_chaining_required FOREIGN KEY (error_chaining) REFERENCES chainings (chaining_id)
+) ON [PRIMARY];

@@ -12,8 +12,8 @@ header("Content-Type:application/json");
 $id         = "conn";
 $connect    = true;
 
-include("crypto.php");
-include("classes/r_main.php");
+include(__DIR__."/crypto.php");
+include(__DIR__."/classes/r_main.php");
 
 //@ REMOVE UNNECESSARY PARAMETERS
 unset($_REQUEST["password2"]);

@@ -27,7 +27,7 @@ header("Content-Type:application/json");
 // exit;
 
 //@ PERFORM BASIC AUTHENTICATION & DEPENDENCY IMPORTATION
-include("__adminAuth.php");
+include(__DIR__."__adminAuth.php");
 
 $command = @$_REQUEST["command"];
 unset($_REQUEST["command"]);
@@ -41,7 +41,7 @@ unset($_REQUEST["token"]);
 
 if (@$command) {
 
-	include("process.php");
+	include(__DIR__."process.php");
 
 	$proc = new Process($connection);
 

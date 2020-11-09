@@ -5,8 +5,7 @@ if (isset($_SERVER["CONTENT_TYPE"]) && strpos($_SERVER["CONTENT_TYPE"], "applica
     $_REQUEST = array_merge($_REQUEST, $_POST);
 }
 
-
-require "vendor/autoload.php";
+require __DIR__."/vendor/autoload.php";
 
 //@ LOAD ENVIRONMENT VARIABLES 
 use Symfony\Component\Dotenv\Dotenv;
@@ -16,7 +15,7 @@ $dotenv->load(__DIR__ . '/.env');
 
 
 //@ LOAD THE JWT HELPER 
-include "jwt.php";
+include __DIR__."/jwt.php";
 $jwtHandler = new AuthTokenHandler($_ENV["ENCODING_KEY"]);
 $GLOBALS["jwt"] = $jwtHandler;
 
@@ -55,7 +54,8 @@ error_reporting(@$_ENV["OUT_LOUD"] == "true" ? E_ALL : 0);
 
 
 //@ PERFORM BASIC AUTHENTICATION & DEPENDENCY IMPORTATION
-include("__adminAuth.php");
+include(__DIR__."/__adminAuth.php");
+
 
 $command = @$_REQUEST["command"];
 $table = @$_REQUEST["table"];

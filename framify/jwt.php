@@ -25,7 +25,7 @@ class AuthTokenHandler
 
         $this->secret_key = $secretkey;
 
-        $this->issuer =  ($_SERVER["SERVER_NAME"] != "_") ? $_SERVER["SERVER_NAME"] : $_SERVER["SERVER_ADDR"];
+        $this->issuer =  (@$_SERVER["SERVER_NAME"] != "_") ? @$_SERVER["SERVER_NAME"] : @$_SERVER["SERVER_ADDR"];
 
         try {
             $this->jwt = new JWT($this->secret_key, $algo, $maxAge);

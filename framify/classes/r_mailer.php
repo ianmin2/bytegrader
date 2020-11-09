@@ -82,7 +82,7 @@
 				) :
 
 					/*Construct the email using the default layout */
-					include "mail/mailTemplate.php";
+					include __DIR__."mail/mailTemplate.php";
 					
 					$template = new mailTemplate( $this->message['html']['header'], $this->message['html']['body'], $this->message['html']['footer'] );
 					

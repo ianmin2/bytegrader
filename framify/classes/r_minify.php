@@ -8,7 +8,7 @@
 		private $edit;
 				
 		public function __construct(){
-			include "r_editor.php";
+			include __DIR__."r_editor.php";
 			$this->edit = new r_editor();
 			$curr_path = getcwd();	
 		}

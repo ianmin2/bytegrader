@@ -1,11 +1,14 @@
 <?php
 header("Content-Type:application/json");
+include __DIR__."/../workers/grading/index.php";
+
 class DissertationAPI
 {
     public $c;
+    public $grading_worker;
 
     public function __construct($connection)
-    {
+    {        
         $this->c  = $connection;
     }
 
@@ -382,8 +385,37 @@ class DissertationAPI
     }
 
 
+    private function toJSON( $dta ){
+        try {
+            $converted = json_encode($dta);
+            return $converted;
+        } catch (Throwable $th) {
+            return dta;
+        }
+    }
+
     public function addChaining($chainingData)
     {
+        print_r($chainingData);
+        exit;
+
+        //@ validate the chaining settings
+        // $grading_rules =  $this->toJSON($chainingData["chaining_rules"]);
+        // $chaining_validation = new GradingWorker( $grading_rules , [], $this->c, true);
+        // print_r( $chaining_validation);
+        // exit;
+
+        // $grading_rules, $submission_instance, $connection, $sampling = false
+
+
+        // $grading_rules, $submission_instance, $connection, $sampling = false
+        
+        // print_r($chaining);
+        // exit;
+        // $chaining_validation = new GradingWorker( $prepared , [], $this->c, true);
+        // return $chaining_validation;
+        // // if($chaining_validation) return $chaining_validation;
+
         $processed_values = $this->getFieldNamesAndValues($chainingData);
         return ($this->c->aQuery("INSERT INTO chainings {$processed_values['keys']} VALUES {$processed_values['values']}", true, "Assignment Chaining Added.", "Failed to records assignment chaining!"));
     }
