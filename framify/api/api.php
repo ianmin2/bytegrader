@@ -396,19 +396,17 @@ class DissertationAPI
 
     public function addChaining($chainingData)
     {
-        print_r($chainingData);
+       
+
+        //@ validate the chaining settings        
+        $chaining_validation = new GradingWorker( $chainingData["chaining_rules"] , [], $this->c, true);
+        $validation_result = $chaining_validation->validateRules();
+
+        print_r($validation_result);
         exit;
 
-        //@ validate the chaining settings
+        //@ Convert to JSON for convenient storage;
         // $grading_rules =  $this->toJSON($chainingData["chaining_rules"]);
-        // $chaining_validation = new GradingWorker( $grading_rules , [], $this->c, true);
-        // print_r( $chaining_validation);
-        // exit;
-
-        // $grading_rules, $submission_instance, $connection, $sampling = false
-
-
-        // $grading_rules, $submission_instance, $connection, $sampling = false
         
         // print_r($chaining);
         // exit;
