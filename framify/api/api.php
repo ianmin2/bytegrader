@@ -315,7 +315,6 @@ class DissertationAPI
     }
 
 
-
     public function getRoutes()
     {
 
@@ -381,7 +380,20 @@ class DissertationAPI
     //=============================================================================
     public function getChainings()
     {
-        return ($this->c->printQueryResults("SELECT * FROM chainings;"));
+        return ($this->c->printQueryResults("
+        SELECT 
+            c.*,
+            a.assignment_name,
+            a.assignment_owner,
+            id as assignment_owner_id, 
+            name as assignment_owner_name, 
+            email as rule_assignment_owner_email
+        FROM chainings c
+        LEFT JOIN assignments a
+            ON a.assignment_id = c.chaining_assignment
+        JOIN users 
+            ON a.assignment_owner = users.id
+        ;",true,true));
     }
 
 
@@ -402,18 +414,14 @@ class DissertationAPI
         $chaining_validation = new GradingWorker( $chainingData["chaining_rules"] , [], $this->c, true);
         $validation_result = $chaining_validation->validateRules();
 
-        print_r($validation_result);
-        exit;
+        //@ If validation failled, let the user know
+        if($validation_result) return $validation_result;
+    
 
         //@ Convert to JSON for convenient storage;
-        // $grading_rules =  $this->toJSON($chainingData["chaining_rules"]);
-        
-        // print_r($chaining);
-        // exit;
-        // $chaining_validation = new GradingWorker( $prepared , [], $this->c, true);
-        // return $chaining_validation;
-        // // if($chaining_validation) return $chaining_validation;
+        $grading_rules =  $this->toJSON($chainingData["chaining_rules"]);
 
+        //@ Process and store
         $processed_values = $this->getFieldNamesAndValues($chainingData);
         return ($this->c->aQuery("INSERT INTO chainings {$processed_values['keys']} VALUES {$processed_values['values']}", true, "Assignment Chaining Added.", "Failed to records assignment chaining!"));
     }
