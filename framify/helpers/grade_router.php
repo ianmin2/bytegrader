@@ -15,12 +15,12 @@ class GradeRouter
         $this->client = new GuzzleHttp\Client(['base_uri' => $this->base_url]);
     }
 
-    function call ( $method = "GET", $path = "/", $parameters = [], $call_type = 'json' )
+    function call ( $method = "GET", $path = "/", $parameters = [] )
     {
 
         $responseObject = [];
         try {
-            $response = $this->client->request(strtoupper($method), $path, [ $call_type = $parameters ]);
+            $response = $this->client->request(strtoupper($method), $path, $parameters );
             $responseObject["response"] = [ "error" => false, "body" => $response->getBody(), "headers" => $response->getHeaders(), "status" => $response->getStatusCode(), "content" => $response->getBody()->getContents(), "response" => $response];
         } catch (\Throwable $th) {
            $responseObject["response"] =[ "error" => true,  "object" => $th,  "message" =>  $th->__toString(), "response" => $response];
