@@ -52,7 +52,16 @@ class connection
 
         else :
 
-            echo $this->wrap($this->makeResponse(500, "Could not initiate a connection due to insufficient data"));
+            echo $this->wrap($this->makeResponse(500, "Could not initiate a connection due to insufficient data",
+                [
+                    "host" => @$db_host,
+                    "name" => @$db_name,
+                    "driver" => @$db_driver,
+                    "password" => @$db_password,
+                    "username" => @$db_username,
+                    "port" => @$db_port
+                ]
+            ));
             exit;
 
         endif;

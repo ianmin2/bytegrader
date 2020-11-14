@@ -18,13 +18,19 @@ class GradeRouter
     function call ( $method = "GET", $path = "/", $parameters = [] )
     {
 
+        // // print_r($this->local_cache);
+        // print_r(["method" => $method, "base_url" => $this->base_url, "path" => $path, "parameters" => $parameters]);
+        // exit;
+
         $responseObject = [];
         try {
             $response = $this->client->request(strtoupper($method), $path, $parameters );
-            $responseObject["response"] = [ "error" => false, "body" => $response->getBody(), "headers" => $response->getHeaders(), "status" => $response->getStatusCode(), "content" => $response->getBody()->getContents(), "response" => $response];
+            $responseObject = [ "error" => false, "body" => $response->getBody(), "headers" => $response->getHeaders(), "status" => $response->getStatusCode(), "content" => $response->getBody()->getContents(), "response" => $response];
         } catch (\Throwable $th) {
-           $responseObject["response"] =[ "error" => true,  "object" => $th,  "message" =>  $th->__toString(), "response" => $response];
+           $responseObject =[ "error" => true,  "object" => $th,  "message" =>  $th->__toString(), "response" => $response];
         }
+
+        return $responseObject;
        
     }    
 }

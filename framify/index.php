@@ -303,6 +303,14 @@ if (@$command) {
             exit;
             break;
 
+        case "mock":
+           
+            include (__DIR__."/sampler.php");
+            echo json_encode(["tester" => "live", "path" => __DIR__."/sampler.php"]);
+            exit;
+            $sampler = new Sampler();
+            $sampler->mockGrading();
+        break;
         default:
             echo $connection->wrapResponse(500, "The required parameters were not met. Please ensure that they are defined");
             exit;
