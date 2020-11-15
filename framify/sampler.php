@@ -36,15 +36,15 @@ class Sampler
   // }';
   
   public function __construct($connection) {
-   $this->c = $connection;
-
+    $this->c = $connection;
     $this->submisison_instance = $this->c->printQueryResults("SELECT * FROM attempts WHERE attempt_id='2';")[0];
-    $this->grading_rules = $this->c->printQueryResults("SELECT * FROM chainings WHERE chaining_id='6';")[0];
-
+    $this->grading_rules = $this->c->printQueryResults("SELECT * FROM chainings WHERE chaining_id='1';")[0];
   }
 
   public function mockGrading()
   {
+    // print_r( ($this->grading_rules["chaining_rules"]) );
+    // exit;
     new GradingWorker( $this->grading_rules["chaining_rules"], $this->submisison_instance, [1]);
   } 
 

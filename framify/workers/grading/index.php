@@ -16,11 +16,13 @@ class GradingWorker
 
     public function __construct( $grading_rules, $submission_instance, $connection, $sampling = false)
     {
+
+        $encoded_grades = json_decode($grading_rules,true);
         $this->c  = $connection;
-        $this->active_grading_rules = is_array($grading_rules) ? $grading_rules : json_decode($grading_rules,true);
+        $this->active_grading_rules = $encoded_grades ?? $grading_rules;
         $this->active_submission    = is_array($submission_instance) ? $submission_instance : json_decode($grading_rules, true);
 
-        
+    
         //@ Die a loud death
         if(!isset($grading_rules)||!isset($submission_instance)||!isset($connection)){
             $error_message = "";
@@ -33,11 +35,10 @@ class GradingWorker
         
         //@ Prep the router object
         $this->grade_router = new GradeRouter($this->active_submission["attempt_main_path"]);
-        $this->grading_result['logs'] .= "\nSet the main grading url to {$this->active_submission["attempt_main_path"]}";
+        $this->grading_result['logs'] .= "\n\nSet the main grading url to {$this->active_submission["attempt_main_path"]}\n";
 
         //@ start the actual grading
         if(!$sampling){ $this->doGrading(); }
-
         
     }
 
@@ -85,12 +86,48 @@ class GradingWorker
     }
 
     private function extractParametersFromParent($param_data, $parent_references = [], $rgx = "/{{.*}}/i") {
-        
-        $that = $this;
 
-        $replaceWithParentValue = function ($vl) use ($parent_references,$that,$rgx)
+        print_r($parent_references);
+        echo "\n\n__________";
+        // exit;
+        $that = $this;
+       
+        $nestedBodySearch = function($content_pool, $content_key){
+
+            echo "\n=======================\n@ At nested body search\n=======================\n";
+
+            $content_pool = json_decode($content_pool,true) ?? $content_pool;
+
+            $dt = $content_pool[$content_key];
+            if(!$dt)
+            {
+                //@ If is array
+                if(is_array($content_pool))
+                {
+                    $cpLength = count($content_pool);
+                    //@ If isn't associative, get the last item
+                    if(!isAssoc($content_pool)){
+                        $content_pool = $content_pool[$cpLength-1];
+                    }
+                    //@ loop through
+                    foreach($content_pool as $ky => $vl){
+                        if(strtolower($ky) == strtolower($content_key))
+                        {
+                            $dt = $vl;
+                        }
+                    }
+                }
+            }
+           return $dt;
+        };
+
+        $replaceWithParentValue = function ($vl) use ($parent_references,$that,$rgx,$nestedBodySearch)
         {
+            echo "\n=======================\n@ At replace with parent value\n=======================\n";
+
             $target_parameter = preg_replace('/({{)|(}})|(parent\.)/i','',$vl);
+            echo($target_parameter);
+            echo "+++++++++++++++++++++++++++++++=\n\n\n\n\n\n\n\n\n";
             $found = NULL;
             for($i = 0; $i < count($parent_references); $i++){
                 if(isset($found)) break;
@@ -98,8 +135,9 @@ class GradingWorker
                 //@ ensure the cached response isn't an error   
                 if(!$that->local_cache[$parent_references[$i]]["error"])
                 {
+
                     //@ search in the body 
-                    $body_search = @$that->local_cache[$parent_references[$i]]["body"][$target_parameter]; 
+                    $body_search = @$nestedBodySearch($that->local_cache[$parent_references[$i]]["content"],$target_parameter); 
                     if($body_search)
                     {
                         $that->grading_result["logs"].="\n\nReplaced the inherited parameter {{$target_parameter}} from rule #{$parent_references[$i]} with the extracted body value '{$body_search}'.";
@@ -123,22 +161,49 @@ class GradingWorker
             return isset($found) ? $found : "";
         };
 
+        $transformTokeyValueArray = function ($temp_values,$item) use ($rgx,$replaceWithParentValue){
 
-        $transformTokeyValueArray = function ($temp_values,$item) use ($rgx){
+            echo "\n=======================\n@ At transform tokey ({$item}) array\n=======================\n";
 
             //@ check if it is a replacement item
-            if(preg_match($rgx,$item))
+            if(preg_match($rgx,$item["value"],$matched))
             {
-                $item["value"] = $replaceWithParentValue($item["value"]);
+                // echo "\n=======================\n@ matches regex ({$matched[0]})\n=======================\n";               
+                $item["value"] = $replaceWithParentValue($matched[0]);   
+                echo "\n=======================\n@ matches regex ({$matched[0]}) === ({$item['value']})\n=======================\n";      
+                $this->grading_result["logs"].="\n\tParameter `{$item['key']}` to `{$item["value"]}.`";          
             }
+            $this->grading_result["logs"].="\n\nSetting the parameter `{$item['key']}` to `{$item["value"]}.`";
             $temp_values[$item["key"]] = $item["value"];
 
             return $temp_values;
         };
+
+        $transformTokenFromString = function($string_value) use ($rgx,$that,$nestedBodySearch,$parent_references){
+            preg_match($rgx,$item["value"],$matched);
+            $new_val = $string_value;
+            foreach ($matched as $ky => $val) {
+                $act_parameter = preg_replace('/({{)|(}})|(parent\.)/i','',$val);
+                $l = $nestedBodySearch($parent_references,$act_parameter);
+                $new_val = preg_replace($rgx,$l,$new_val);
+            }
+            echo "\n\n###################################".$new_val."\n\n";
+            exit;
+        };
       
         if($param_data)
         {
-            return ( array_reduce(json_decode($param_data, true), $transformTokeyValueArray, array()));
+            $transformed_param_data = json_decode($param_data, true);
+            $transformed_param_data = $transformed_param_data ?? $param_data;
+            if(is_array($transformed_param_data))
+            {
+                return ( array_reduce(json_decode($param_data, true), $transformTokeyValueArray, array()));
+            }
+            else {
+                echo "DOne -----";
+                return preg_match($rgx,$item["value"]) ?  $transformTokenFromString($transformed_param_data) : $transformed_param_data;
+            }
+            // return ( array_reduce(json_decode($param_data, true), $transformTokeyValueArray, array()));
         }
         else {
             return [];
@@ -148,15 +213,23 @@ class GradingWorker
     }
 
     private function doGrading()
-    {
+    { 
 
+        $this->grading_result["logs"].="\n\nAt 'grade executor' - Inintiating data loop.`";
+
+        echo "\n\nactive rules: ".count($this->active_grading_rules)."\n\n";
+        
        //@ Loop through each rule, 
        for ($idx=0; $idx < count($this->active_grading_rules); $idx++) { 
             
+            
+
             $current_rule = $this->active_grading_rules[$idx];
             $parent_rules = $current_rule['parent_rules'];
 
+            // echo "\n\n========================>";
             // print_r(["current" => $current_rule, "parent" => $parent_rules]);
+            // echo "<========================\n\n";
             // exit;
 
             //@ Check if the parent rules are defined
@@ -164,7 +237,7 @@ class GradingWorker
             {
                 if($parent_rules[0])
                 {
-                     //@ Ensure that all the parent rules have been cached already
+                    //@ Ensure that all the parent rules have been cached already
                     for($i = 0; $i<count($parent_rules);$i++){
                         $current_parent_rule = $parent_rules[$i];
                         if(!$this->local_cache[$current_parent_rule]){
@@ -176,8 +249,11 @@ class GradingWorker
 
             //@ Capture current method;
             $call_method = $current_rule["rule_method"];
-            $call_path = $current_rule["rule_path"];
+            $call_path = $this->extractParametersFromParent($current_rule["rule_path"], $parent_rules,"/({{.*}})|({.*})/i");
 
+            print_r($parent_rules);
+            echo "Call Path --- ({$call_path}) vs ({$current_rule["rule_path"]})";
+            
             // // print_r(["method" => $call_method, "path" => $call_path]);
             // // exit;
             
@@ -186,9 +262,12 @@ class GradingWorker
             $parameter_type = ($call_method == "GET") ? "query" : "json";
             $payload_params = $this->extractParametersFromParent($current_rule["rule_parameters"], $parent_rules,"/({{.*}})|({.*})/i");
             $header_params = $this->extractParametersFromParent($current_rule["rule_headers"], $parent_rules,"/({{.*}})|({.*})/i");
+            echo "\n\n____________________________________________\n\n";
+            print_r($current_rule["rule_headers"]);
+            echo "\n\n____________________________________________\n\n";
             $call_data = [
                 "headers" => $header_params,
-                "{$parameter_type}"    => ($call_method == "GET") ? $payload_params : ($payload_params)   ,
+                "{$parameter_type}"    => ($call_method == "GET") ? $payload_params : ($payload_params),
                 'http_errors' => false
             ];
 

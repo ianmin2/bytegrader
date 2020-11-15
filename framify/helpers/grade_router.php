@@ -15,17 +15,29 @@ class GradeRouter
         $this->client = new GuzzleHttp\Client(['base_uri' => $this->base_url]);
     }
 
+    private function parseJson( $data )
+    {
+        try {
+          $parsed =  json_decode($data,true);
+          return $parsed;
+        } catch (\Throwable $th) {
+            return $data;
+        }
+    }
     function call ( $method = "GET", $path = "/", $parameters = [] )
     {
-
-        // // print_r($this->local_cache);
+        // echo "\n====================================\n";
+        // print_r($parameters);
+        // echo "\n====================================\n";
         // print_r(["method" => $method, "base_url" => $this->base_url, "path" => $path, "parameters" => $parameters]);
         // exit;
+
+        echo "\n\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\nCalling {$method} - {$path}\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n\n";
 
         $responseObject = [];
         try {
             $response = $this->client->request(strtoupper($method), $path, $parameters );
-            $responseObject = [ "error" => false, "body" => $response->getBody(), "headers" => $response->getHeaders(), "status" => $response->getStatusCode(), "content" => $response->getBody()->getContents(), "response" => $response];
+            $responseObject = [ "error" => false, "body" => $response->getBody(), "headers" => $response->getHeaders(), "status" => $response->getStatusCode(), "content" => $this->parseJson($response->getBody()->getContents()), "response" => $response];
         } catch (\Throwable $th) {
            $responseObject =[ "error" => true,  "object" => $th,  "message" =>  $th->__toString(), "response" => $response];
         }
