@@ -23,7 +23,8 @@
     ]);
     ///{{parent.test_number}}/{parent.phantom_id}
 
-
+function doValueExtraction( $canvas, $transform_values )
+{
 
     $rgx = "/({{.*}})|({.*})/i";
 
@@ -108,17 +109,6 @@
     $process_array_values = function( $parent_array_value, $parameter_bank ) use ($rgx, $process_string_values )
     {
 
-        // [
-        //     [
-        //         "key"   =>  "name",
-        //         "value" =>  "{{parent.test_number}}"
-        //     ],
-        //     [
-        //         "key"   =>  "identifier",
-        //         "value" =>  "Authorization {service_id}"
-        //     ]
-        // ]
-
         //@ Define an output variable
         $found = [];
 
@@ -147,4 +137,8 @@
 
     };
 
-    print_r($deterministic_processor($sample_array, $parent_data));
+    return $deterministic_processor($canvas, $transform_values);
+
+}
+
+    print_r(doValueExtraction($sample_array, $parent_data));
