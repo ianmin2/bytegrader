@@ -281,19 +281,29 @@ class GradingWorker
         };
     
         //@ handle independent extractions ["last as first"]
-        $independent_extractor = function($parameter_bank = [], $value_key = "") {
+        $independent_extractor = function($parameter_bank = [], $value_key = "") use ($isAssoc) {
     
             $parameter_bank = @json_decode($parameter_bank,true) ?? $parameter_bank;
     
             $found = NULL;
     
-            foreach (array_reverse($parameter_bank) as $key => $value) {
-                if($found) continue;
-                if(@$value[$value_key])
-                {
-                    $found = @$value[$value_key];
+            if($isAssoc)
+            {
+                //@ Attempt a direct extraction
+                $found = @$parameter_bank[$value_key];
+                
+            }
+            else {
+                foreach (array_reverse($parameter_bank) as $key => $value) {
+                    if($found) continue;
+                    if(@$value[$value_key])
+                    {
+                        $found = @$value[$value_key];
+                    }
                 }
             }
+    
+            
             return $found;
         };
        
@@ -301,7 +311,7 @@ class GradingWorker
         $extract_values = function( $value_key, $parameter_bank ) use ($isAssoc, $independent_extractor) {
         
             //@ Attempt to convert the conversion pool to an array
-            $parameter_bank = json_decode($parameter_bank,true) ?? $parameter_bank;
+            $parameter_bank = @json_decode($parameter_bank,true) ?? $parameter_bank;
     
             // print_r($parameter_bank);
             $found = NULL;
@@ -309,10 +319,38 @@ class GradingWorker
                 if($found) continue;
                 $param_value = !is_array($param_value)? json_decode($param_value,true): $param_value;
     
+               
+    
                 //@ Check if the array is associative
                 if($isAssoc($param_value)){
+                
                     //@ Attempt a direct extraction [from the main object]
                     $found = @$param_value[$value_key];
+    
+                  
+                    //@ Attempt a body extraction
+                    if(!$found && @$param_value["content"])
+                    {
+                        // print_r($param_value);
+                        $found = $independent_extractor($param_value["content"], $value_key);
+                        // echo "\n\n1<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
+                        // print_r($found);
+                        // echo "\n1>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n\n";
+                    }
+    
+                    //@ Attempt a headers extraction
+                    if(!$found && $param_value["headers"])
+                    {
+                        $found = $independent_extractor($param_value["headers"], $value_key);
+                        if(is_array($found))
+                        {
+                            $found = $found[0] ?? json_encode($found);
+                        }
+                        // echo "\n\n2<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
+                        // print_r($found);
+                        // echo "\n2>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n\n";
+                    }
+    
                 }
                 else {
                     //@ Loop through each, from the last value to the first
@@ -321,6 +359,7 @@ class GradingWorker
                
             }
             return $found;
+            // return is_array($found) ? $found[0] : $found;
     
         };
     
@@ -373,7 +412,6 @@ class GradingWorker
             foreach ($parent_array_value as $ky => $val) {
                 // //@ Start a local holder 
                 // $output = [];
-    
                 // //@ Use the string transform option to set the value
                 // $output[$val["key"]] = $process_string_values($val["value"], $parameter_bank);
                 // //@ Update the transformed values tracker
@@ -390,6 +428,7 @@ class GradingWorker
         {
     
             $parsed_value = json_decode($input_value,true) ?? $input_value; 
+            $data_bank = json_decode($data_bank,true) ?? $data_bank;
     
            return is_array($parsed_value) ? $process_array_values($parsed_value,$data_bank) : $process_string_values($parsed_value, $data_bank);
     
