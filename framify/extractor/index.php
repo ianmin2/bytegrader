@@ -1,24 +1,30 @@
 <?php
 
-    $parent_data = json_encode([
-       [
-           "service_id" => 123,
-           "test_number" => "KAA123"
-       ],
-       [
-        "service_id" => 300,
-        "test_number" => "KAA300"
-        ]
-    ]);
+    // $parent_data = json_encode([ 
+    //    "content" => '{"token": "AUTH_TOKEN_UNVEILED"}',
+    //    "body" => [
+    //         [
+    //             "service_id" => 123,
+    //             "test_number" => "KAA123"
+    //         ],
+    //         [
+    //             "service_id" => 300,
+    //             "test_number" => "KAA300"
+    //         ]
+    //     ],        
+    // ]);
+
+    $parent_data = '[{"error":false,"body":{},"headers":{"X-Powered-By":["@framify"],"Access-Control-Allow-Headers":["Origin, X-Requested-With,Content-Type, Access-Control-Allow-Origin, Authorization, Origin, Accept, x-auth-token"],"Access-Control-Allow-Origin":["*"],"Access-Control-Allow-Methods":["GET, POST, PUT, DELETE, OPTIONS"],"Content-Type":["application\/json; charset=utf-8"],"Content-Length":["319"],"ETag":["W\/\"13f-Br7ZsJNXpwOaM\/3v16GG+EDQon8\""],"Vary":["Accept-Encoding"],"Date":["Mon, 16 Nov 2020 02:14:45 GMT"],"Connection":["close"]},"status":200,"content":{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZW1iZXJfaWQiOiIzNiIsInVzZXJuYW1lIjoiaWFubWluMjIiLCJqb2luZWQiOiIyMDIwLTExLTE2VDAwOjM5OjA5LjgxM1oiLCJhY3RpdmUiOnRydWUsIm5hbWUiOiJJYW4gS2FtYXUiLCJpYXQiOjE2MDU0OTI4ODUsImV4cCI6MzYwMDE2MDU0OTI4ODUsImlzcyI6IjE5Mi4xNjguMS4xODQifQ.pe5Qrv4unFJ8oaibgJFA0GIil_jKAm-N6B0kXckj6yc"},"response":{}}]';
+
     $sample_string = "/services/{{parent.service_id}}";
     $sample_array = json_encode([
         [
             "key"   =>  "name",
-            "value" =>  "{{parent.test_number}}"
+            "value" =>  "{{parent.ETag}}"
         ],
         [
             "key"   =>  "identifier",
-            "value" =>  "Authorization {service_id}"
+            "value" =>  "Authorization {token}"
         ]
     ]);
     ///{{parent.test_number}}/{parent.phantom_id}
@@ -32,38 +38,87 @@ function doValueExtraction( $canvas, $transform_values )
         if (array() === $arr) return false;
         return array_keys($arr) !== range(0, count($arr) - 1);
     };
+
+    //@ handle independent extractions ["last as first"]
+    $independent_extractor = function($parameter_bank = [], $value_key = "") use ($isAssoc) {
+
+        $parameter_bank = @json_decode($parameter_bank,true) ?? $parameter_bank;
+
+        $found = NULL;
+
+        if($isAssoc)
+        {
+            //@ Attempt a direct extraction
+            $found = @$parameter_bank[$value_key];
+            
+        }
+        else {
+            foreach (array_reverse($parameter_bank) as $key => $value) {
+                if($found) continue;
+                if(@$value[$value_key])
+                {
+                    $found = @$value[$value_key];
+                }
+            }
+        }
+
+        
+        return $found;
+    };
    
     //@ Get the value matching the key from the parameter bank
-    $extract_values = function( $value_key, $parameter_bank ) use ($isAssoc) {
-
+    $extract_values = function( $value_key, $parameter_bank ) use ($isAssoc, $independent_extractor) {
+    
         //@ Attempt to convert the conversion pool to an array
-        $encoded_param_bank = json_decode($parameter_bank,true);
+        $parameter_bank = @json_decode($parameter_bank,true) ?? $parameter_bank;
 
-        //@ Ensure that the parameter bank is a php array 
-        $parameter_bank = $encoded_param_bank ?? $parameter_bank;
+        // print_r($parameter_bank);
+        $found = NULL;
+        foreach ($parameter_bank as $param_key => $param_value) {
+            if($found) continue;
+            $param_value = !is_array($param_value)? json_decode($param_value,true): $param_value;
 
-        if(is_array($parameter_bank)){
-
-            $found = NULL;
+           
 
             //@ Check if the array is associative
-            if($isAssoc($parameter_bank))
-            {
-                //@ Attempt to get a value
-                $found = @$parameter_bank[$value_key];
+            if($isAssoc($param_value)){
+            
+                //@ Attempt a direct extraction [from the main object]
+                $found = @$param_value[$value_key];
+
+              
+                //@ Attempt a body extraction
+                if(!$found && @$param_value["content"])
+                {
+                    // print_r($param_value);
+                    $found = $independent_extractor($param_value["content"], $value_key);
+                    // echo "\n\n1<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
+                    // print_r($found);
+                    // echo "\n1>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n\n";
+                }
+
+                //@ Attempt a headers extraction
+                if(!$found && $param_value["headers"])
+                {
+                    $found = $independent_extractor($param_value["headers"], $value_key);
+                    if(is_array($found))
+                    {
+                        $found = $found[0] ?? json_encode($found);
+                    }
+                    // echo "\n\n2<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
+                    // print_r($found);
+                    // echo "\n2>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n\n";
+                }
+
             }
             else {
                 //@ Loop through each, from the last value to the first
-                foreach (array_reverse($parameter_bank) as $key => $value) {
-                    if(@$found) continue;
-                    if(@$value[$value_key])
-                    {
-                        $found = $value[$value_key];
-                    }
-                }
+                $found = $independent_extractor($param_value, $value_key);
             }
-            return $found;
+           
         }
+        return $found;
+        // return is_array($found) ? $found[0] : $found;
 
     };
 
@@ -114,13 +169,13 @@ function doValueExtraction( $canvas, $transform_values )
 
         //@ Loop through each array value
         foreach ($parent_array_value as $ky => $val) {
-            //@ Start a local holder 
-            $output = [];
-
-            //@ Use the string transform option to set the value
-            $output[$val["key"]] = $process_string_values($val["value"], $parameter_bank);
-            //@ Update the transformed values tracker
-            $found[$ky] = $output;           
+            // //@ Start a local holder 
+            // $output = [];
+            // //@ Use the string transform option to set the value
+            // $output[$val["key"]] = $process_string_values($val["value"], $parameter_bank);
+            // //@ Update the transformed values tracker
+            // $found[$ky] = $output;        
+            $found[$val["key"]] = $process_string_values($val["value"], $parameter_bank);   
         }
 
         //@ Return the transformed value
@@ -132,6 +187,7 @@ function doValueExtraction( $canvas, $transform_values )
     {
 
         $parsed_value = json_decode($input_value,true) ?? $input_value; 
+        $data_bank = json_decode($data_bank,true) ?? $data_bank;
 
        return is_array($parsed_value) ? $process_array_values($parsed_value,$data_bank) : $process_string_values($parsed_value, $data_bank);
 
@@ -140,5 +196,10 @@ function doValueExtraction( $canvas, $transform_values )
     return $deterministic_processor($canvas, $transform_values);
 
 }
+
+    // $enc = json_decode($parent_data,true);
+    // $enc["content"] = json_decode($enc["content"],true) ?? $enc["content"];
+
+    // print_r($enc);
 
     print_r(doValueExtraction($sample_array, $parent_data));

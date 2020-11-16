@@ -14,13 +14,12 @@ class GradingWorker
     private $local_cache = [];
     private $error_log = "";
 
+    //@ Accepts, [{grading_ruleset},{submission_configuration},{database_connection_object},{mock_flagger}]
     public function __construct( $grading_rules, $submission_instance, $connection, $sampling = false)
     {
-
-        $encoded_grades = json_decode($grading_rules,true);
         $this->c  = $connection;
-        $this->active_grading_rules = $encoded_grades ?? $grading_rules;
-        $this->active_submission    = is_array($submission_instance) ? $submission_instance : json_decode($grading_rules, true);
+        $this->active_grading_rules = json_decode($grading_rules,true) ?? $grading_rules;
+        $this->active_submission    = json_decode($submission_instance, true) ?? $submission_instance;
 
     
         //@ Die a loud death
@@ -33,9 +32,13 @@ class GradingWorker
             exit;
         } 
         
+        
+        $this->grading_result["logs"].=@"\n\n🌟 🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟\nCommencing with grading for `".$this->active_submission["attempt_name"]."` (".$this->active_submission["attempt_student_identifier"].")\n🌟 🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟\n";
+
         //@ Prep the router object
         $this->grade_router = new GradeRouter($this->active_submission["attempt_main_path"]);
         $this->grading_result['logs'] .= "\n\nSet the main grading url to {$this->active_submission["attempt_main_path"]}\n";
+
 
         //@ start the actual grading
         if(!$sampling){ $this->doGrading(); }
@@ -212,92 +215,300 @@ class GradingWorker
 
     }
 
-    private function doGrading()
-    { 
+    // ------------------------------------------------
 
-        $this->grading_result["logs"].="\n\nAt 'grade executor' - Inintiating data loop.`";
+    //@ Handle auth header separation
+    private function doAuthenticationHeaderSeparation( $all_headers )
+    {
+        $result = ["headers" => [] ];
 
-        echo "\n\nactive rules: ".count($this->active_grading_rules)."\n\n";
-        
-       //@ Loop through each rule, 
-       for ($idx=0; $idx < count($this->active_grading_rules); $idx++) { 
+        $handle_addition = function($header_key, $header_value, $basket)
+        {
+            // if(strtolower( preg_replace('/\s+/', '', $header_key)) == "authorization")
+            // {
+            //     $basket[auth] = [null, $header_value];
+            // }
+            // else {
+                $basket["headers"][$header_key] = $header_value;
+            // }
+            return $basket;
+        };
+
+        if(is_array($all_headers))
+        {
             
-            
+            foreach ($all_headers as $header_key => $header_value) {
 
-            $current_rule = $this->active_grading_rules[$idx];
-            $parent_rules = $current_rule['parent_rules'];
-
-            // echo "\n\n========================>";
-            // print_r(["current" => $current_rule, "parent" => $parent_rules]);
-            // echo "<========================\n\n";
-            // exit;
-
-            //@ Check if the parent rules are defined
-            if( is_array($parent_rules) )
-            {
-                if($parent_rules[0])
+                if(is_array($header_value))
                 {
-                    //@ Ensure that all the parent rules have been cached already
-                    for($i = 0; $i<count($parent_rules);$i++){
-                        $current_parent_rule = $parent_rules[$i];
-                        if(!$this->local_cache[$current_parent_rule]){
-                            $this->error_log .= "\nCould not find a local reference to the grading rule {$current_parent_rule} required by {$current_rule['rule_id']}\n\t Ensure that {$current_parent_rule} is defined before {$current_rule['rule_id']}\n";
-                        }
+                    foreach ($header_value as $key => $value) {
+                       $result = $handle_addition($key,$value,$result);                    
+                    }
+                }
+                else {
+                  $result = $handle_addition($header_key,$header_value,$result);
+                }
+
+            }
+        }
+
+        // echo ">>>>>>>>>>>>>>>>>>";
+        // print_r($result);
+        // echo ">>>>>>>>>>>>>>>>>>>>>>>>>>".json_encode($all_headers);
+        return $result;
+    }
+
+
+    //@ Handle parent rule extraction
+    private function doParentRuleExtraction( $parent_rule_array )
+    {
+        $found = [];
+        foreach ($parent_rule_array as $parent_id) {
+           if(@$this->local_cache[$parent_id]) array_push($found, $this->local_cache[$parent_id] );
+        }
+        return $found;
+    }
+
+    //@ Handle parameter substitution
+    private function doValueExtraction( $canvas, $transform_values )
+    {
+    
+        $rgx = "/({{.*}})|({.*})/i";
+    
+        $isAssoc = function (array $arr) {
+            if (array() === $arr) return false;
+            return array_keys($arr) !== range(0, count($arr) - 1);
+        };
+    
+        //@ handle independent extractions ["last as first"]
+        $independent_extractor = function($parameter_bank = [], $value_key = "") {
+    
+            $parameter_bank = @json_decode($parameter_bank,true) ?? $parameter_bank;
+    
+            $found = NULL;
+    
+            foreach (array_reverse($parameter_bank) as $key => $value) {
+                if($found) continue;
+                if(@$value[$value_key])
+                {
+                    $found = @$value[$value_key];
+                }
+            }
+            return $found;
+        };
+       
+        //@ Get the value matching the key from the parameter bank
+        $extract_values = function( $value_key, $parameter_bank ) use ($isAssoc, $independent_extractor) {
+        
+            //@ Attempt to convert the conversion pool to an array
+            $parameter_bank = json_decode($parameter_bank,true) ?? $parameter_bank;
+    
+            // print_r($parameter_bank);
+            $found = NULL;
+            foreach ($parameter_bank as $param_key => $param_value) {
+                if($found) continue;
+                $param_value = !is_array($param_value)? json_decode($param_value,true): $param_value;
+    
+                //@ Check if the array is associative
+                if($isAssoc($param_value)){
+                    //@ Attempt a direct extraction [from the main object]
+                    $found = @$param_value[$value_key];
+                }
+                else {
+                    //@ Loop through each, from the last value to the first
+                    $found = $independent_extractor($param_value, $value_key);
+                }
+               
+            }
+            return $found;
+    
+        };
+    
+        //@ Process extraction for string values
+        $process_string_values = function( $parent_value, $parameter_bank ) use ($rgx, $extract_values)
+        {
+            //@ Check if any regex matches exist
+            $string_matches = preg_match($rgx, $parent_value,$matches);
+    
+            //@ where none exist, don't waste time
+            if(!$string_matches)
+            {
+                return $parent_value;
+            }
+    
+            //@ Filter duplicates from matches
+            $matches = array_unique($matches);
+    
+            //@ Loop through each potential match
+            foreach ($matches as $key => $value) {
+                //@ Ignore false positives
+                if($value)
+                {
+                    //@ Capture the proper parameter name
+                    $replacement_key = preg_replace('/({)|(})|(parent\.)/i','',$value);
+    
+                    //@ Attempt a data extract for the key 
+                    $replacement_value = $extract_values($replacement_key,$parameter_bank);
+    
+                    //@ Conditionally Apply the replacement to the string
+                    if( $replacement_value )
+                    {
+                        $parent_value = preg_replace( "/{$value}/i" ,$replacement_value, $parent_value);
                     }
                 }
             }
-
-            //@ Capture current method;
-            $call_method = $current_rule["rule_method"];
-            $call_path = $this->extractParametersFromParent($current_rule["rule_path"], $parent_rules,"/({{.*}})|({.*})/i");
-
-            print_r($parent_rules);
-            echo "Call Path --- ({$call_path}) vs ({$current_rule["rule_path"]})";
             
-            // // print_r(["method" => $call_method, "path" => $call_path]);
-            // // exit;
-            
-            // print_r(["method" => $current_rule["rule_headers"], "path" => $current_rule["rule_parameters"]]);
-            // exit;
+            return $parent_value;
+    
+        };
+    
+        //@ Process extraction for array values [in the default format [{key,value},{key,value}]]
+        $process_array_values = function( $parent_array_value, $parameter_bank ) use ($rgx, $process_string_values )
+        {
+    
+            //@ Define an output variable
+            $found = [];
+    
+            //@ Loop through each array value
+            foreach ($parent_array_value as $ky => $val) {
+                // //@ Start a local holder 
+                // $output = [];
+    
+                // //@ Use the string transform option to set the value
+                // $output[$val["key"]] = $process_string_values($val["value"], $parameter_bank);
+                // //@ Update the transformed values tracker
+                // $found[$ky] = $output;        
+                $found[$val["key"]] = $process_string_values($val["value"], $parameter_bank);   
+            }
+    
+            //@ Return the transformed value
+            return $found;
+    
+        };
+    
+        $deterministic_processor = function ($input_value, $data_bank) use ($process_string_values, $process_array_values)
+        {
+    
+            $parsed_value = json_decode($input_value,true) ?? $input_value; 
+    
+           return is_array($parsed_value) ? $process_array_values($parsed_value,$data_bank) : $process_string_values($parsed_value, $data_bank);
+    
+        };
+    
+        return $deterministic_processor($canvas, $transform_values);
+    
+    }
+
+    //@ Handle checks for missing dependencies
+    private function containsMissingDependencies( $dependency_array )
+    {
+        $contains_missing = false;
+        foreach ($dependency_array as  $rule_identifier) {
+            if(!$this->local_cache[$rule_identifier])
+            {
+                $contains_missing = true;
+                $this->error_log .= "\nCould not find a local reference to the grading rule {$current_parent_rule} required by {$current_rule['rule_id']}\n\t Ensure that {$current_parent_rule} is defined before {$current_rule['rule_id']}\n";
+            }
+        }
+        return $contains_missing;
+    }
+
+
+    private function doGrading()
+    { 
+
+        // print_r($this->active_submission);
+        // exit;
+
+        $this->grading_result["logs"].="\n\nAt 'grade executor' - Inintiating data loop.`";
+
+        // echo "\n\nactive rules: ".count($this->active_grading_rules)."\n\n";
+        
+       //@ Loop through each rule, 
+        foreach ($this->active_grading_rules as $rule_key => $active_rule) {
+
+            $log = function ($data) use ($active_rule) {
+                if( $active_rule["rule_id"] == "20008")
+                {
+                    echo "\n\n#{$active_rule["rule_id"]}".$data."\n";
+                }
+            };
+
+            $this->grading_result["logs"].=@"\n\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@>>>>>>>>>>>\nProcessing rule #{$active_rule['rule_id']}.";
+
+            //@ Lay hold of the parent rules
+            $parent_rules = $active_rule['parent_rules'];
+            $this->grading_result["logs"].=@"\n#{$active_rule['rule_id']}\tDependencies decalred as ".json_encode( $this->doParentRuleExtraction($parent_rules));
+
+            //@ Keep track of missing dependencies [initially assume the worst]
+            $has_missing_dependencies = true;
+
+            //@ If dependencies exist and are in the array format,
+            if(is_array($parent_rules))
+            {
+                //@ Check for missing dependency definitions
+                $has_missing_dependencies = $this->containsMissingDependencies($parent_rules);
+            }
+
+            //@ PROCEED WITH GRADING PREPARATIONS
+            //@ Get the call_method
+            $call_method = strtoupper($active_rule["rule_method"]);
+            $this->grading_result["logs"].=@"\n#{$active_rule['rule_id']}\tDefined call method as {$call_method}.";
+
+            //@ Format the call path and replace any placeholder value
+            $call_path = $this->doValueExtraction($active_rule["rule_path"], $this->doParentRuleExtraction($parent_rules));
+            // $log("callPath");
+            $this->grading_result["logs"].=@"\n#{$active_rule['rule_id']}\tDefined call path as {$call_path}.";
+
+            //@ The GUZZLER HTTP handler specific paremeters
             $parameter_type = ($call_method == "GET") ? "query" : "json";
-            $payload_params = $this->extractParametersFromParent($current_rule["rule_parameters"], $parent_rules,"/({{.*}})|({.*})/i");
-            $header_params = $this->extractParametersFromParent($current_rule["rule_headers"], $parent_rules,"/({{.*}})|({.*})/i");
-            echo "\n\n____________________________________________\n\n";
-            print_r($current_rule["rule_headers"]);
-            echo "\n\n____________________________________________\n\n";
+            $this->grading_result["logs"].=@"\n#{$active_rule['rule_id']}\tDefined GUZZLE http data as {$parameter_type}.";
+
+            //@ Format the payload parameters
+            $payload_params = $this->doValueExtraction($active_rule["rule_parameters"], $this->doParentRuleExtraction($parent_rules));
+            $this->grading_result["logs"].=@"\n#{$active_rule['rule_id']}\tDefined body parameters as:\n".@json_encode($payload_params)??$payload_params;
+
+            //@ Format the header parameters
+            $header_params = $this->doAuthenticationHeaderSeparation( $this->doValueExtraction($active_rule["rule_headers"], $this->doParentRuleExtraction($parent_rules)) );
+            
+            $log("header parameters set to \n".json_encode($header_params)."\n\t\twith data\n".json_encode($this->doParentRuleExtraction($parent_rules))."");
+            $this->grading_result["logs"].=@"\n#{$active_rule['rule_id']}\tDefined header parameters as:\n".@json_encode($header_params)??$header_params;
+
+            //@ Format the HTTP request object in a 'GUZZLER' compatible way
             $call_data = [
-                "headers" => $header_params,
                 "{$parameter_type}"    => ($call_method == "GET") ? $payload_params : ($payload_params),
                 'http_errors' => false
             ];
+            //Optionally add call headers [headers & auth]
+            foreach ($header_params as $header_key => $header_value) {
+               if(count($header_value)>0)
+               {
+                $call_data[$header_key] = $header_value;
+               }
+            }
 
-            $this->grading_result["logs"].="\n\nInherited and static parameters locked for rule #{$parent_references[$i]}.";
+            $log("HEADER INFO: ".json_encode($call_data));
 
-            // ( $method = "GET", $path = "/", $parameters = [] )
+            //@ Optionally add authentication 
+            // if(count(he))
+
             //@ Execute the rule against the submission/attempt
             $attempt_response = $this->grade_router->call($call_method, $call_path, $call_data);
+            $this->grading_result["logs"].=@"\n#{$active_rule['rule_id']}\t.Executed a grading rule validating call and got a ({$attempt_response["status"]}):\n".@json_encode($attempt_response)??$attempt_response;
 
-            $this->grading_result['logs'].="\n\nFinalized a {$call_method} request to '{$call_path}' and got a ".$attempt_response['status']." response with the message:\n\t".$attempt_response["content"];
+            //@ Populate the 'local_cache' with the response $grading_result
+            $this->local_cache[$active_rule["rule_id"]] = $attempt_response;
+            $this->grading_result["logs"].=@"\n#{$active_rule['rule_id']}\tUpdated the local_cache with the response result.";
 
-            // // // print_r($this->local_cache);
-            // echo "\n\nROUTER RESPONSE:";
-            // print_r($attempt_response["content"]);
-            // echo "\n\n from response with headers:\n";
-            // print_r($header_params);
-            // exit;
-    
-            //@ Populate the local cache with the received data
-            $this->local_cache[$current_rule["rule_id"]] = $attempt_response;     
+            //@ Pass to the grader for expectation matching and grading
 
-            //@ Match against expectations assigning a grade_router
-
-            //@
-
+            // $this->grading_result["logs"].=@"\n#{$active_rule['rule_id']}\t.";
+           
         }
 
         //@ Show a breakdown of the grading procedure
         echo $this->grading_result["logs"];
-
+        exit;
 
     }
 
