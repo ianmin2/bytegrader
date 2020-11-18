@@ -42,6 +42,9 @@ class GradeRouter
            $responseObject =[ "error" => true,  "object" => $th,  "message" =>  $th->__toString(), "response" => $response];
         }
 
+        $tmpv = json_encode($responseObject["content"]) ?? $responseObject["content"];
+        echo ">> ({$responseObject["status"]}) RESPONSE:\n{$tmpv}\n\n";
+
         return $responseObject;
        
     }    

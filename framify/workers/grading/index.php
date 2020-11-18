@@ -283,17 +283,28 @@ class GradingWorker
         //@ handle independent extractions ["last as first"]
         $independent_extractor = function($parameter_bank = [], $value_key = "") use ($isAssoc) {
     
+            // echo "\n\n@ independent extractor\n";
+    
             $parameter_bank = @json_decode($parameter_bank,true) ?? $parameter_bank;
+    
+            // print_r($parameter_bank);
     
             $found = NULL;
     
-            if($isAssoc)
+            if($isAssoc($parameter_bank))
             {
+                // echo "\n\n@ is assoc\n\n";
+                // print_r($parameter_bank);
+    
                 //@ Attempt a direct extraction
                 $found = @$parameter_bank[$value_key];
                 
             }
             else {
+    
+                // echo "\n\n@ is not assoc\n\n";
+                // print_r($parameter_bank);
+    
                 foreach (array_reverse($parameter_bank) as $key => $value) {
                     if($found) continue;
                     if(@$value[$value_key])
@@ -452,6 +463,21 @@ class GradingWorker
         return $contains_missing;
     }
 
+    private function addToGradeTracker($rule_id,$call_response)
+    {
+        //@ Handle first attempts
+        if(!$this->local_cache[$rule_id])
+        {
+            $this->local_cache[$rule_id] =  $call_response;
+        }
+        else if(is_array($this->local_cache[$rule_id])){
+            array_push($this->local_cache[$rule_id], $call_response);
+        }
+        else {
+            $this->local_cache[$rule_id] =  [$this->local_cache[$rule_id],$call_data];
+        }
+        
+    }
 
     private function doGrading()
     { 
@@ -467,10 +493,10 @@ class GradingWorker
         foreach ($this->active_grading_rules as $rule_key => $active_rule) {
 
             $log = function ($data) use ($active_rule) {
-                if( $active_rule["rule_id"] == "20008")
-                {
-                    echo "\n\n#{$active_rule["rule_id"]}".$data."\n";
-                }
+                // if( $active_rule["rule_id"] == "20008")
+                // {
+                //     echo "\n\n#{$active_rule["rule_id"]}".$data."\n";
+                // }
             };
 
             $this->grading_result["logs"].=@"\n\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@>>>>>>>>>>>\nProcessing rule #{$active_rule['rule_id']}.";
@@ -536,7 +562,8 @@ class GradingWorker
             $this->grading_result["logs"].=@"\n#{$active_rule['rule_id']}\t.Executed a grading rule validating call and got a ({$attempt_response["status"]}):\n".@json_encode($attempt_response)??$attempt_response;
 
             //@ Populate the 'local_cache' with the response $grading_result
-            $this->local_cache[$active_rule["rule_id"]] = $attempt_response;
+            // $this->local_cache[$active_rule["rule_id"]] =  $attempt_response;
+            $this->addToGradeTracker($active_rule["rule_id"], $attempt_response);
             $this->grading_result["logs"].=@"\n#{$active_rule['rule_id']}\tUpdated the local_cache with the response result.";
 
             //@ Pass to the grader for expectation matching and grading

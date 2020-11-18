@@ -14,7 +14,9 @@
     //     ],        
     // ]);
 
-    $parent_data = '[{"error":false,"body":{},"headers":{"X-Powered-By":["@framify"],"Access-Control-Allow-Headers":["Origin, X-Requested-With,Content-Type, Access-Control-Allow-Origin, Authorization, Origin, Accept, x-auth-token"],"Access-Control-Allow-Origin":["*"],"Access-Control-Allow-Methods":["GET, POST, PUT, DELETE, OPTIONS"],"Content-Type":["application\/json; charset=utf-8"],"Content-Length":["319"],"ETag":["W\/\"13f-Br7ZsJNXpwOaM\/3v16GG+EDQon8\""],"Vary":["Accept-Encoding"],"Date":["Mon, 16 Nov 2020 02:14:45 GMT"],"Connection":["close"]},"status":200,"content":{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZW1iZXJfaWQiOiIzNiIsInVzZXJuYW1lIjoiaWFubWluMjIiLCJqb2luZWQiOiIyMDIwLTExLTE2VDAwOjM5OjA5LjgxM1oiLCJhY3RpdmUiOnRydWUsIm5hbWUiOiJJYW4gS2FtYXUiLCJpYXQiOjE2MDU0OTI4ODUsImV4cCI6MzYwMDE2MDU0OTI4ODUsImlzcyI6IjE5Mi4xNjguMS4xODQifQ.pe5Qrv4unFJ8oaibgJFA0GIil_jKAm-N6B0kXckj6yc"},"response":{}}]';
+    $parent_data_array = '[{"error":false,"body":{},"headers":{"X-Powered-By":["@framify"],"Access-Control-Allow-Headers":["Origin, X-Requested-With,Content-Type, Access-Control-Allow-Origin, Authorization, Origin, Accept, x-auth-token"],"Access-Control-Allow-Origin":["*"],"Access-Control-Allow-Methods":["GET, POST, PUT, DELETE, OPTIONS"],"Content-Type":["application\/json; charset=utf-8"],"Content-Length":["319"],"ETag":["W\/\"13f-Br7ZsJNXpwOaM\/3v16GG+EDQon8\""],"Vary":["Accept-Encoding"],"Date":["Mon, 16 Nov 2020 02:14:45 GMT"],"Connection":["close"]},"status":200,"content":{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZW1iZXJfaWQiOiIzNiIsInVzZXJuYW1lIjoiaWFubWluMjIiLCJqb2luZWQiOiIyMDIwLTExLTE2VDAwOjM5OjA5LjgxM1oiLCJhY3RpdmUiOnRydWUsIm5hbWUiOiJJYW4gS2FtYXUiLCJpYXQiOjE2MDU0OTI4ODUsImV4cCI6MzYwMDE2MDU0OTI4ODUsImlzcyI6IjE5Mi4xNjguMS4xODQifQ.pe5Qrv4unFJ8oaibgJFA0GIil_jKAm-N6B0kXckj6yc"},"response":{}}]';
+
+    $parent_data_string = '[{"error":false,"body":{},"headers":{"X-Powered-By":["@framify"],"Access-Control-Allow-Headers":["Origin, X-Requested-With,Content-Type, Access-Control-Allow-Origin, Authorization, Origin, Accept, x-auth-token"],"Access-Control-Allow-Origin":["*"],"Access-Control-Allow-Methods":["GET, POST, PUT, DELETE, OPTIONS"],"Content-Type":["application\/json; charset=utf-8"],"Content-Length":["402"],"ETag":["W\/\"192-a65NeniwK1s07OjAXNB2h69BMfc\""],"Vary":["Accept-Encoding"],"Date":["Wed, 18 Nov 2020 02:11:34 GMT"],"Connection":["close"]},"status":200,"content":[{"service_id":"1","service_name":"SMS","service_code":"BX_SMS","service_added":"2020-10-18T17:20:48.184Z","service_active":true},{"service_id":"5","service_name":"SERVICEPI","service_code":"SRV1","service_added":"2020-10-18T21:45:44.579Z","service_active":true},{"service_id":"6","service_name":"realService","service_code":"real one","service_added":"2020-11-16T02:51:19.396Z","service_active":true}],"response":{}}]';
 
     $sample_string = "/services/{{parent.service_id}}";
     $sample_array = json_encode([
@@ -42,17 +44,28 @@ function doValueExtraction( $canvas, $transform_values )
     //@ handle independent extractions ["last as first"]
     $independent_extractor = function($parameter_bank = [], $value_key = "") use ($isAssoc) {
 
+        // echo "\n\n@ independent extractor\n";
+
         $parameter_bank = @json_decode($parameter_bank,true) ?? $parameter_bank;
+
+        // print_r($parameter_bank);
 
         $found = NULL;
 
-        if($isAssoc)
+        if($isAssoc($parameter_bank))
         {
+            // echo "\n\n@ is assoc\n\n";
+            // print_r($parameter_bank);
+
             //@ Attempt a direct extraction
             $found = @$parameter_bank[$value_key];
             
         }
         else {
+
+            // echo "\n\n@ is not assoc\n\n";
+            // print_r($parameter_bank);
+
             foreach (array_reverse($parameter_bank) as $key => $value) {
                 if($found) continue;
                 if(@$value[$value_key])
@@ -197,9 +210,13 @@ function doValueExtraction( $canvas, $transform_values )
 
 }
 
+
     // $enc = json_decode($parent_data,true);
     // $enc["content"] = json_decode($enc["content"],true) ?? $enc["content"];
 
     // print_r($enc);
 
-    print_r(doValueExtraction($sample_array, $parent_data));
+    print_r(doValueExtraction($sample_array, $parent_data_array));
+    echo "\n\n\n";
+    print_r(doValueExtraction($sample_string, $parent_data_string));
+    echo "\n\n\n";
