@@ -246,7 +246,8 @@ $simple_array = json_encode([
             $extract_value_from_call_result = function($key) use ($grading_call_result)
             {
                 $key = (strpos($key,'{')) ? $key : "{".$key."}";                
-                return doValueExtraction($key, $grading_call_result );
+                $resultant_value = doValueExtraction($key, $grading_call_result );
+                return $key == $resultant_value ? NULL : $resultant_value;
             };
     
             //@ Get the proper value from the passed token
@@ -297,13 +298,13 @@ $simple_array = json_encode([
                         // $out["explanation"] .= "\n ${key}";
                         $new_points = ($value) 
                         ? ($value == $formated_call_result[$key] )
-                            ? $points_per_item 
-                            : $points_per_item * ((intval($no_match_weight)??50)/100)
-                        : $points_per_item;
-                        $out["explanation"] .= "\n\nAdded {$new_points} to the score for matching the key '{$key}'\nValue: \texpected {$value} \tgot {$formated_call_result[$key]}";
+                            ?  $points_per_item 
+                            : $points_per_item * 0 //((intval($no_match_weight)??50)/100)
+                        : ($formated_call_result[$key] == NULL) ? 0 : $points_per_item;
+                        $out["explanation"] .= "\n\nAdded {$new_points} to the score for matching the key '{$key}'\nResult: \texpected '".@json_encode($value)."' \tgot '".@json_encode($formated_call_result[$key])."'";
                     }
                     else {
-                        $out["explanation"] .= "\n\nNo points scored for the key '{$key}'\nValue: \texpected {$value}";
+                        $out["explanation"] .= "\n\nNo points scored for the key '{$key}'\nResult: \texpected '".@json_encode($value)."'";
                     }
                     //@ Add up the points;
                     $cumulative_points += $new_points;
@@ -396,7 +397,7 @@ $botched_array = json_encode([
 
     echo "\n\n";
     // var_dump(doValueExtraction("token", $call_result_object ));
-    print_r( gradeCallResultAssessor($call_result_array, $complex_open_expected, []) );
+    print_r( gradeCallResultAssessor($call_result_array, $complex_open_nested_expected, []) );
    
 //     $no_match_weight = "20";
 
