@@ -133,7 +133,7 @@ class GradingWorker
             echo "+++++++++++++++++++++++++++++++=\n\n\n\n\n\n\n\n\n";
             $found = NULL;
             for($i = 0; $i < count($parent_references); $i++){
-                if(isset($found)) break;
+                if(isset($found)) break;       
 
                 //@ ensure the cached response isn't an error   
                 if(!$that->local_cache[$parent_references[$i]]["error"])
@@ -258,13 +258,12 @@ class GradingWorker
         return $result;
     }
 
-
     //@ Handle parent rule extraction
     private function doParentRuleExtraction( $parent_rule_array )
     {
         $found = [];
         foreach ($parent_rule_array as $parent_id) {
-           if(@$this->local_cache[$parent_id]) array_push($found, $this->local_cache[$parent_id] );
+            if(@$this->local_cache[$parent_id]) array_push($found, $this->local_cache[$parent_id] );
         }
         return $found;
     }
@@ -395,7 +394,7 @@ class GradingWorker
                 if($value)
                 {
                     //@ Capture the proper parameter name
-                    $replacement_key = preg_replace('/({)|(})|(parent\.)/i','',$value);
+                    $replacement_key = preg_replace('/({)|(})|(parent\.)/i', '', trim($value));
     
                     //@ Attempt a data extract for the key 
                     $replacement_value = $extract_values($replacement_key,$parameter_bank);
@@ -403,7 +402,7 @@ class GradingWorker
                     //@ Conditionally Apply the replacement to the string
                     if( $replacement_value )
                     {
-                        $parent_value = preg_replace( "/{$value}/i" ,$replacement_value, $parent_value);
+                        $parent_value = preg_replace( "/{$value}/i" ,trim($replacement_value), $parent_value);
                     }
                 }
             }
@@ -441,13 +440,14 @@ class GradingWorker
             $parsed_value = json_decode($input_value,true) ?? $input_value; 
             $data_bank = json_decode($data_bank,true) ?? $data_bank;
     
-           return is_array($parsed_value) ? $process_array_values($parsed_value,$data_bank) : $process_string_values($parsed_value, $data_bank);
+           return is_array($parsed_value) ? $process_array_values($parsed_value, $data_bank) : $process_string_values($parsed_value, $data_bank);
     
         };
     
         return $deterministic_processor($canvas, $transform_values);
     
     }
+
 
     //@ Handle checks for missing dependencies
     private function containsMissingDependencies( $dependency_array )
@@ -463,6 +463,7 @@ class GradingWorker
         return $contains_missing;
     }
 
+    //@ Keep track of grades [in multiples where applicable]
     private function addToGradeTracker($rule_id,$call_response)
     {
         //@ Handle first attempts
@@ -470,15 +471,42 @@ class GradingWorker
         {
             $this->local_cache[$rule_id] =  $call_response;
         }
+        //@ Handle tertiary attempts
         else if(is_array($this->local_cache[$rule_id])){
             array_push($this->local_cache[$rule_id], $call_response);
         }
+        //@ Handle secondary attempts
         else {
             $this->local_cache[$rule_id] =  [$this->local_cache[$rule_id],$call_data];
         }
         
     }
 
+//@!!!!!!!!!!!!!!!!!!!
+
+    private function gradeCallResultAssessor($grading_call_result, $expected_data, $grading_criteria){
+        
+        $grading_breakdown = [];
+
+        //@ If expected data is defined, check it
+        if($expected_data)
+        {
+
+            $parsed_expectations = @"";
+
+            $grading_breakdown = [ 
+                "template" => $expected_data,
+                "actual" => [], 
+                "accuracy" => 0
+            ];
+        }
+        
+        //@ Go through each of the grading rules and check the result's compliance
+
+        return $grading_breakdown;
+    }
+
+    //@! The grading entry object
     private function doGrading()
     { 
 
@@ -567,6 +595,8 @@ class GradingWorker
             $this->grading_result["logs"].=@"\n#{$active_rule['rule_id']}\tUpdated the local_cache with the response result.";
 
             //@ Pass to the grader for expectation matching and grading
+            echo "";
+            
 
             // $this->grading_result["logs"].=@"\n#{$active_rule['rule_id']}\t.";
            
