@@ -306,146 +306,158 @@ $simple_array = json_encode([
         return $grading_breakdown;
     }
 
-    print_r(computeCallResultAccuracy($call_result_object, $grading_rule_object));
-    exit;
-
     //@ Performs grade score computations depending on expected output
+    //@ { $call_result_array, $complex_open_expected }
+    //@ { call_result, expected_data }
     //@ convert the simple structures into a [ ["key" => "", "value" => ""] ] format
-    function gradeCallResultAssessor($grading_call_result, $expected_data, $grading_criteria)
+    function gradeCallResultAssessor($grading_call_result, $grading_rule_object)
     {
         //@ Set the basic grading breakdown
         $grading_breakdown = [
-            'template' => $expected_data,
+            'template' => 'INVALID GRADING OBJECT DEFINED',
             'nested' => false,
             'parsed' => [],
             'actual' => [],
+            'grading' => [],
             'result' => 0,
         ];
 
-        $counter = 0;
+        //@ Convert rule object to array
+        $grading_rule_object = @json_decode($grading_rule_object, true);
 
-        $points = [];
+        //@ Ensure that the grading rule object is workable
+        if (is_array($grading_rule_object)) {
+            //@ Extract the expected_data from the current rule
+            $expected_data = $grading_rule_object['rule_expected_data'];
 
-        $output_data = [];
+            //@ Update the grading breakdown template with the expected data
+            $grading_breakdown['template'] = $expected_data;
 
-        //@ If expected data is defined, check it
-        if ($expected_data && '' != $expected_data) {
-            //@ Attempt to convert to json
-            $parsed_expectations = @json_decode($expected_data, 2) ?? trim($expected_data);
+            //@ Setup an output template
+            $output_data = [];
 
-            //@ Value tester helper closure method
-            $has_string = function ($test_string) use ($parsed_expectations) {
-                return false !== strpos($parsed_expectations, $test_string);
-            };
+            //@ If expected data is defined, check it
+            if ($expected_data && '' != $expected_data) {
+                //@ Attempt to convert to json
+                $parsed_expectations = @json_decode($expected_data, 2) ?? trim($expected_data);
 
-            //@ Extract the value from the provided call result
-            $extract_value_from_call_result = function ($key) use ($grading_call_result) {
-                $key = (strpos($key, '{')) ? $key : '{'.$key.'}';
-                $resultant_value = doValueExtraction($key, $grading_call_result);
+                //@ Value tester helper closure method
+                $has_string = function ($test_string) use ($parsed_expectations) {
+                    return false !== strpos($parsed_expectations, $test_string);
+                };
 
-                return $key == $resultant_value ? null : $resultant_value;
-            };
+                //@ Extract the value from the provided call result
+                $extract_value_from_call_result = function ($key) use ($grading_call_result) {
+                    $key = (strpos($key, '{')) ? $key : '{'.$key.'}';
+                    $resultant_value = doValueExtraction($key, $grading_call_result);
 
-            //@ Get the proper value from the passed token
-            $extract_key_value_as_array = function ($parent_value) {
-                $tmp_holder = [];
-                foreach (explode(',', preg_replace('/({)|(})|(parent\.)/i', '', trim($parent_value))) as $key => $value) {
-                    $tmp_holder[$value] = '';
-                }
+                    return $key == $resultant_value ? null : $resultant_value;
+                };
 
-                return $tmp_holder;
-            };
-
-            //@ Transform an array to output
-            $get_data_from_array = function ($parsed_array) use ($extract_value_from_call_result) {
-                $output_data = [];
-                //@ Loop through each item and get its value
-                foreach ($parsed_array as $key => $value) {
-                    if (@$value['key']) {
-                        $output_data[$value['key']] = $extract_value_from_call_result($value['key']);
-                    } else {
-                        $output_data[$key] = $extract_value_from_call_result($key);
+                //@ Get the proper value from the passed token
+                $extract_key_value_as_array = function ($parent_value) {
+                    $tmp_holder = [];
+                    foreach (explode(',', preg_replace('/({)|(})|(parent\.)/i', '', trim($parent_value))) as $key => $value) {
+                        $tmp_holder[$value] = '';
                     }
-                }
 
-                return $output_data;
-            };
+                    return $tmp_holder;
+                };
 
-            //@ Do the actual grade score computation
-            $compare_expected_with_call_results = function ($expected_format = [], $formated_call_result = [], $no_match_weight = 50) {
-                $out = ['explanation' => '', 'result' => 0];
-
-                $item_total = count($expected_format) ?? 1;
-                $points_per_item = 100 / $item_total;
-
-                $out['explanation'] = "Found {$item_total} expected items each worth {$points_per_item} points";
-
-                $cumulative_points = 0;
-                //@ loop through each expected results item
-                foreach ($expected_format as $key => $value) {
-                    if (array_key_exists($key, $formated_call_result)) {
-                        // $out["explanation"] .= "\n ${key}";
-                        $new_points = ($value)
-                        ? ($value == $formated_call_result[$key])
-                            ? $points_per_item
-                            : $points_per_item * 0 //((intval($no_match_weight)??50)/100)
-                        : (null == $formated_call_result[$key]) ? 0 : $points_per_item;
-                        $out['explanation'] .= "\n\nAdded {$new_points} to the score for matching the key '{$key}'\nResult: \texpected '".@json_encode($value)."' \tgot '".@json_encode($formated_call_result[$key])."'";
-                    } else {
-                        $out['explanation'] .= "\n\nNo points scored for the key '{$key}'\nResult: \texpected '".@json_encode($value)."'";
+                //@ Transform an array to output
+                $get_data_from_array = function ($parsed_array) use ($extract_value_from_call_result) {
+                    $output_data = [];
+                    //@ Loop through each item and get its value
+                    foreach ($parsed_array as $key => $value) {
+                        if (@$value['key']) {
+                            $output_data[$value['key']] = $extract_value_from_call_result($value['key']);
+                        } else {
+                            $output_data[$key] = $extract_value_from_call_result($key);
+                        }
                     }
-                    //@ Add up the points;
-                    $cumulative_points += $new_points;
+
+                    return $output_data;
+                };
+
+                //@ Do the actual grade score computation
+                $compare_expected_with_call_results = function ($expected_format = [], $formated_call_result = [], $no_match_weight = 50) {
+                    $out = ['explanation' => '', 'result' => 0];
+
+                    $item_total = count($expected_format) ?? 1;
+                    $points_per_item = 100 / $item_total;
+
+                    $out['explanation'] = "Found {$item_total} expected items each worth {$points_per_item} points";
+
+                    $cumulative_points = 0;
+                    //@ loop through each expected results item
+                    foreach ($expected_format as $key => $value) {
+                        if (array_key_exists($key, $formated_call_result)) {
+                            // $out["explanation"] .= "\n ${key}";
+                            $new_points = ($value)
+                            ? ($value == $formated_call_result[$key])
+                                ? $points_per_item
+                                : $points_per_item * 0 //((intval($no_match_weight)??50)/100)
+                            : (null == $formated_call_result[$key]) ? 0 : $points_per_item;
+                            $out['explanation'] .= "\n\nAdded {$new_points} to the score for matching the key '{$key}'\nResult: \texpected '".@json_encode($value)."' \tgot '".@json_encode($formated_call_result[$key])."'";
+                        } else {
+                            $out['explanation'] .= "\n\nNo points scored for the key '{$key}'\nResult: \texpected '".@json_encode($value)."'";
+                        }
+                        //@ Add up the points;
+                        $cumulative_points += $new_points;
+                    }
+
+                    $out['explanation'] .= "\n\n{$cumulative_points} points scored for matching rules";
+                    $out['result'] = round($cumulative_points, 2, PHP_ROUND_HALF_DOWN);
+
+                    //@ give the judgement on the score
+                    return $out;
+                };
+
+                //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+                //@ If expectations is of type, array [i.e $explicit_expected]
+                if (is_array($parsed_expectations)) {
+                    $output_data = $get_data_from_array($parsed_expectations);
+                }
+                //@  if has curly but no parent square braces  [i.e $simple_open_expected, $complex_open_expected]
+                elseif (!$has_string('[') && !$has_string(']') && $has_string('}') && $has_string('{')) {
+                    $extracted_arr = $extract_key_value_as_array($parsed_expectations);
+                    $output_data = $get_data_from_array($extracted_arr);
+                }
+                //@ If is array of simple or open types
+                elseif (preg_match('/^\[.*\]$/i', trim($parsed_expectations)) && $has_string('{') && $has_string('}')) {
+                    //@ keep a note that it is nested
+                    $grading_breakdown['nested'] = true;
+
+                    //@ Remove the JS array placeholder items
+                    $altered_expectations = preg_replace('/^\[|\]$/i', '', trim($parsed_expectations));
+
+                    $extracted_arr = $extract_key_value_as_array($altered_expectations);
+                    $output_data = $get_data_from_array($extracted_arr);
                 }
 
-                $out['explanation'] .= "\n\n{$cumulative_points} points scored for matching rules";
-                $out['result'] = round($cumulative_points, 2, PHP_ROUND_HALF_DOWN);
-
-                //@ give the judgement on the score
-                return $out;
-            };
-
-            //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-            //@ If expectations is of type, array [i.e $explicit_expected]
-            if (is_array($parsed_expectations)) {
-                $output_data = $get_data_from_array($parsed_expectations);
-            }
-            //@  if has curly but no parent square braces  [i.e $simple_open_expected, $complex_open_expected]
-            elseif (!$has_string('[') && !$has_string(']') && $has_string('}') && $has_string('{')) {
-                $extracted_arr = $extract_key_value_as_array($parsed_expectations);
-                $output_data = $get_data_from_array($extracted_arr);
-            }
-            //@ If is array of simple or open types
-            elseif (preg_match('/^\[.*\]$/i', trim($parsed_expectations)) && $has_string('{') && $has_string('}')) {
-                //@ keep a note that it is nested
-                $grading_breakdown['nested'] = true;
-
-                //@ Remove the JS array placeholder items
-                $altered_expectations = preg_replace('/^\[|\]$/i', '', trim($parsed_expectations));
-
-                $extracted_arr = $extract_key_value_as_array($altered_expectations);
-                $output_data = $get_data_from_array($extracted_arr);
-
-                //@ NOTE: Remember to validate actual response as array
-                echo "\n\nNOT YET!!\n\n";
+                //@ Update the 'expected_data' section of the grading object
+                $grading_breakdown['grading']['expected_data'] = $compare_expected_with_call_results($extracted_arr ?? $parsed_expectations, $output_data);
+            } else {
+                //@ If no response is expected, assign the highest score
+                $grading_breakdown['grading']['expected_data'] = ['result' => 100, 'explanation' => 'Could not find rules to verify against, full score assigned'];
             }
 
-            // echo "\n@ no match for template '{$parsed_expectations}'   ";
-            // die();
+            //@ Update the grading breakdown object result with the parameter adherance result
+            $grading_breakdown['grading']['result'] += $grading_breakdown['grading']['expected_data']['result'] ?? 0;
 
-            $grading_breakdown['grading'] = $compare_expected_with_call_results($extracted_arr ?? $parsed_expectations, $output_data);
-        } else {
-            //@ If no response is expected, assign the highest score
-            $grading_breakdown['grading'] = ['result' => 100, 'explanation' => 'Could not find rules to verify against, full score assigned'];
+            //@ Go through each of the grading rules and check the general result's compliance (status_code,mime_type, ...)
+            $grading_breakdown['grading']['response_format'] = $this->computeCallResultAccuracy($grading_call_result, $grading_rule_object);
+
+            //@ Update the grading breakdown object result with the general rule adherance result
+            $grading_breakdown['result'] += $grading_breakdown['grading']['response_format']['result'] ?? 0;
+
+            //@ Add a reference to the actual call result [value]
+            $grading_breakdown['actual'] = $output_data;
+            $grading_breakdown['parsed'] = $extracted_arr ?? $parsed_expectations;
         }
 
-        //@ Go through each of the grading rules and check the result's compliance
-
-        //@ Add a reference to the actual call result [value]
-        $grading_breakdown['actual'] = $output_data;
-        $grading_breakdown['parsed'] = $extracted_arr ?? $parsed_expectations;
-
+        //@ Get back to the people with the results
         return $grading_breakdown;
     }
 
