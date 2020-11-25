@@ -20,8 +20,8 @@ class GradingWorker
     public function __construct($grading_rules, $submission_instance, $connection, $sampling = false)
     {
         $this->c = $connection;
-        $this->active_grading_rules = json_decode($grading_rules, true) ?? $grading_rules;
-        $this->active_submission = json_decode($submission_instance, true) ?? $submission_instance;
+        $this->active_grading_rules = @json_decode($grading_rules, true) ?? $grading_rules;
+        $this->active_submission = @json_decode($submission_instance, true) ?? $submission_instance;
 
         //@ Die a loud death
         if (!isset($grading_rules) || !isset($submission_instance) || !isset($connection)) {
@@ -53,8 +53,13 @@ class GradingWorker
 
     // ------------------------------------------------
 
-    //@ Fetch a particular grading rule from the database
-    // private function getSubmissionAssignment
+    //@ check if is associative array
+    private function isAssociativeArray(array $arr)
+    {
+        return ([] === $arr)
+        ? false
+        : array_keys($arr) !== range(0, count($arr) - 1);
+    }
 
     //@ Handle auth header separation
     private function doAuthenticationHeaderSeparation($all_headers)
@@ -105,13 +110,14 @@ class GradingWorker
     {
         $rgx = '/({{.*}})|({.*})/i';
 
-        $isAssoc = function (array $arr) {
-            if ([] === $arr) {
-                return false;
-            }
+        $that = $this;
 
-            return array_keys($arr) !== range(0, count($arr) - 1);
+        $isAssoc = function (array $arr) use ($that) {
+            return $that->isAssociativeArray($arr);
         };
+
+        // var_dump($isAssoc);
+        // exit;
 
         //@ handle independent extractions ["last as first"]
         $independent_extractor = function ($parameter_bank = [], $value_key = '') use ($isAssoc) {
@@ -146,47 +152,58 @@ class GradingWorker
             return $found;
         };
 
+        $extract_from_assoc = function ($param_value, $value_key) use ($independent_extractor) {
+            //@ Attempt a direct extraction [from the main object]
+            $found = @$param_value[$value_key];
+
+            //@ Attempt a body extraction
+            if (!$found && @$param_value['content']) {
+                // print_r($param_value);
+                $found = $independent_extractor($param_value['content'], $value_key);
+                // echo "\n\n1<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
+                 // print_r($found);
+                 // echo "\n1>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n\n";
+            }
+
+            //@ Attempt a headers extraction
+            if (!$found && $param_value['headers']) {
+                $found = $independent_extractor($param_value['headers'], $value_key);
+                if (is_array($found)) {
+                    $found = $found[0] ?? json_encode($found);
+                }
+                // echo "\n\n2<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
+                 // print_r($found);
+                 // echo "\n2>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n\n";
+            }
+
+            return $found;
+        };
+
         //@ Get the value matching the key from the parameter bank
-        $extract_values = function ($value_key, $parameter_bank) use ($isAssoc, $independent_extractor) {
+        $extract_values = function ($value_key, $parameter_bank) use ($isAssoc, $independent_extractor, $extract_from_assoc) {
             //@ Attempt to convert the conversion pool to an array
             $parameter_bank = @json_decode($parameter_bank, true) ?? $parameter_bank;
 
-            // print_r($parameter_bank);
             $found = null;
-            foreach ($parameter_bank as $param_key => $param_value) {
-                if ($found) {
-                    continue;
-                }
-                $param_value = !is_array($param_value) ? json_decode($param_value, true) : $param_value;
 
-                //@ Check if the array is associative
-                if ($isAssoc($param_value)) {
-                    //@ Attempt a direct extraction [from the main object]
-                    $found = @$param_value[$value_key];
-
-                    //@ Attempt a body extraction
-                    if (!$found && @$param_value['content']) {
-                        // print_r($param_value);
-                        $found = $independent_extractor($param_value['content'], $value_key);
-                        // echo "\n\n1<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
-                        // print_r($found);
-                        // echo "\n1>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n\n";
+            if (!$isAssoc($parameter_bank)) {
+                foreach ($parameter_bank as $param_key => $param_value) {
+                    if ($found) {
+                        continue;
                     }
 
-                    //@ Attempt a headers extraction
-                    if (!$found && $param_value['headers']) {
-                        $found = $independent_extractor($param_value['headers'], $value_key);
-                        if (is_array($found)) {
-                            $found = $found[0] ?? json_encode($found);
-                        }
-                        // echo "\n\n2<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
-                        // print_r($found);
-                        // echo "\n2>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n\n";
+                    $param_value = !is_array($param_value) ? json_decode($param_value, true) ?? $param_value : $param_value;
+
+                    //@ Check if the array is associative
+                    if ($isAssoc($param_value)) {
+                        $found = $extract_from_assoc($param_value, $value_key);
+                    } else {
+                        //@ Loop through each, from the last value to the first
+                        $found = $independent_extractor($param_value, $value_key);
                     }
-                } else {
-                    //@ Loop through each, from the last value to the first
-                    $found = $independent_extractor($param_value, $value_key);
                 }
+            } else {
+                $found = $extract_from_assoc($parameter_bank, $value_key);
             }
 
             return $found;
@@ -231,6 +248,8 @@ class GradingWorker
             //@ Define an output variable
             $found = [];
 
+            // print_r("\n**********************************************\nENTERED ARRAY_VALUES\n**************************************\n");
+
             //@ Loop through each array value
             foreach ($parent_array_value as $ky => $val) {
                 // //@ Start a local holder
@@ -247,8 +266,8 @@ class GradingWorker
         };
 
         $deterministic_processor = function ($input_value, $data_bank) use ($process_string_values, $process_array_values) {
-            $parsed_value = json_decode($input_value, true) ?? $input_value;
-            $data_bank = json_decode($data_bank, true) ?? $data_bank;
+            $parsed_value = @json_decode($input_value, true) ?? $input_value;
+            $data_bank = @json_decode($data_bank, true) ?? $data_bank;
 
             return is_array($parsed_value) ? $process_array_values($parsed_value, $data_bank) : $process_string_values($parsed_value, $data_bank);
         };
@@ -292,32 +311,30 @@ class GradingWorker
     //@ Test the grading call against the non-parameter rule criteria
     private function computeCallResultAccuracy($grading_call_result = [], $grading_rule_object = [])
     {
-        $grading_call_result = json_decode($grading_call_result, true) ?? $grading_call_result;
-        $grading_rule_object = json_decode($grading_rule_object, true) ?? $grading_rule_object;
-        $grading_rule_combo = is_array($grading_rule_object) ? json_decode($grading_rule_object['rule_grading'], true) ?? '' : '';
+        $grading_call_result = @json_decode($grading_call_result, true) ?? $grading_call_result;
+        $grading_rule_object = @json_decode($grading_rule_object, true) ?? $grading_rule_object;
+        $grading_rule_combo = is_array($grading_rule_object) ? json_decode($grading_rule_object['rule_grading'], true) ?? $grading_rule_object['rule_grading'] : '';
 
         $grading_breakdown = [
             'result' => 0,
             'actual' => [],
         ];
 
-        $isAssoc = function (array $arr) {
-            if ([] === $arr) {
-                return false;
-            }
+        $that = $this;
 
-            return array_keys($arr) !== range(0, count($arr) - 1);
+        $isAssoc = function (array $arr) use ($that) {
+            return $that->isAssociativeArray($arr);
         };
 
         //@ Check for matches
         $find_structured_matches = function ($parameter_name, $expected_value, $actual_result) use ($grading_rule_combo) {
             $out = ['explanation' => '', 'result' => 0];
 
-            $actual_result = json_encode($actual_result);
-            $expected_value = json_encode($expected_value);
+            $actual_result = @json_encode($actual_result);
+            $expected_value = @json_encode($expected_value);
 
             //@ fetch the parameter from the call result
-            if ($expected_value == $actual_result || (false !== stripos(preg_replace('/"|\\/i', '', $actual_result), preg_replace('/"|\\/i', '', $expected_value)))) {
+            if ($expected_value == $actual_result || (false !== stripos(preg_replace('/(\")|(\')/i', '', stripslashes($actual_result)), preg_replace('/(\")|(\')/i', '', stripslashes($expected_value))))) {
                 $out['explanation'] .= "\n\nThe expected value for '{$parameter_name}' ({$expected_value}) perfectly matches as ".($actual_result);
                 $out['result'] = $grading_rule_combo[$parameter_name]['match'];
             } else {
@@ -341,7 +358,7 @@ class GradingWorker
             }
 
             if (0 == $out['result']) {
-                $out['explanation'] .= "\n\nNo match was found in the specified criteria where '{$parameter_name}' == '{$actual_result}'.";
+                $out['explanation'] .= "\n\nNo match was found in the specified criteria where '{$parameter_name}' == '{$actual_result}', expected ({$expected_value})";
                 $out['result'] = $grading_rule_combo[$parameter_name]['no_match'];
             }
 
@@ -395,7 +412,7 @@ class GradingWorker
         ];
 
         //@ Convert rule object to array
-        $grading_rule_object = @json_decode($grading_rule_object, true);
+        $grading_rule_object = @json_decode($grading_rule_object, true) ?? $grading_rule_object;
 
         //@ Ensure that the grading rule object is workable
         if (is_array($grading_rule_object)) {
@@ -408,10 +425,12 @@ class GradingWorker
             //@ Setup an output template
             $output_data = [];
 
+            //@>>>>>>>>>>>>>>>>>>>>>>>>>>> EXPECTED_DATA (out of 100 points)
+
             //@ If expected data is defined, check it
             if ($expected_data && '' != $expected_data) {
                 //@ Attempt to convert to json
-                $parsed_expectations = @json_decode($expected_data, 2) ?? trim($expected_data);
+                $parsed_expectations = @json_decode($expected_data, 2) ?? ('string' == gettype($expected_data)) ? trim($expected_data) : $expected_data;
 
                 //@ Value tester helper closure method
                 $has_string = function ($test_string) use ($parsed_expectations) {
@@ -421,7 +440,7 @@ class GradingWorker
                 //@ Extract the value from the provided call result
                 $extract_value_from_call_result = function ($key) use ($grading_call_result) {
                     $key = (strpos($key, '{')) ? $key : '{'.$key.'}';
-                    $resultant_value = doValueExtraction($key, $grading_call_result);
+                    $resultant_value = $this->doValueExtraction($key, $grading_call_result);
 
                     return $key == $resultant_value ? null : $resultant_value;
                 };
@@ -438,15 +457,28 @@ class GradingWorker
 
                 //@ Transform an array to output
                 $get_data_from_array = function ($parsed_array) use ($extract_value_from_call_result) {
+                    $points_per_match = 100 / count($parsed_array) ?? 1;
+                    $points_garnered = 0;
                     $output_data = [];
                     //@ Loop through each item and get its value
                     foreach ($parsed_array as $key => $value) {
                         if (@$value['key']) {
+                            //@ Attempt to extract a value from the data
                             $output_data[$value['key']] = $extract_value_from_call_result($value['key']);
+                            //@ if the data value exists, add a point to match
+                            if ($output_data[$value['key']]) {
+                                $points_garnered += $points_per_match;
+                            }
                         } else {
                             $output_data[$key] = $extract_value_from_call_result($key);
+                            if ($output_data[$key]) {
+                                $points_garnered += $points_per_match;
+                            }
                         }
                     }
+
+                    //@ Add the results to the output object
+                    $output_data['result'] = $points_garnered;
 
                     return $output_data;
                 };
@@ -518,16 +550,21 @@ class GradingWorker
             //@ Update the grading breakdown object result with the parameter adherance result
             $grading_breakdown['grading']['result'] += $grading_breakdown['grading']['expected_data']['result'] ?? 0;
 
+            //@>>>>>>>>>>>>>>>>>>>>>>>>>>> RESPONSE_FORMAT (out of 200 points)
+
             //@ Go through each of the grading rules and check the general result's compliance (status_code,mime_type, ...)
             $grading_breakdown['grading']['response_format'] = $this->computeCallResultAccuracy($grading_call_result, $grading_rule_object);
 
             //@ Update the grading breakdown object result with the general rule adherance result
-            $grading_breakdown['result'] += $grading_breakdown['grading']['response_format']['result'] ?? 0;
+            $grading_breakdown['grading']['result'] += $grading_breakdown['grading']['response_format']['result'] ?? 0;
 
             //@ Add a reference to the actual call result [value]
             $grading_breakdown['actual'] = $output_data;
             $grading_breakdown['parsed'] = $extracted_arr ?? $parsed_expectations;
         }
+
+        //@ Attach the grading result to the final result
+        $grading_breakdown['result'] = $grading_breakdown['grading']['result'];
 
         //@ Get back to the people with the results
         return $grading_breakdown;
@@ -546,10 +583,10 @@ class GradingWorker
         //@ Loop through each rule,
         foreach ($this->active_grading_rules as $rule_key => $active_rule) {
             $log = function ($log_data) use ($active_rule) {
-                $this->grading_result['logs'] .= @"\n#{$active_rule['rule_id']}\\at".$log_data;
+                $this->grading_result['logs'] .= @"\n#{$active_rule['rule_id']}\t\t".$log_data."\n";
             };
 
-            $this->grading_result['logs'] .= @"\n\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@>>>>>>>>>>>\nProcessing rule #{$active_rule['rule_id']}.";
+            $this->grading_result['logs'] .= @"\n\n\n☀️ ☀️ ☀️ ☀️ ☀️ ☀️ ☀️ ☀️ ☀️ ☀️ ☀️ ☀️ ☀️ ☀️ ☀️ ☀️ ☀️ ☀️ ☀️ ☀️ ☀️ ☀️ ☀️ ☀️ >\nProcessing rule #{$active_rule['rule_id']}.\n";
 
             //@ Lay hold of the parent rules
             $parent_rules = $active_rule['parent_rules'];
@@ -610,26 +647,28 @@ class GradingWorker
 
             //@ Pass to the grader for expectation matching and grading
             $rule_grading_result = $this->gradeCallResultAssessor($attempt_response, $active_rule);
-            $log("Received the rule grading result as {$rule_grading_result['result']}.");
+            $log("Received the rule grading result as {$rule_grading_result['result']}  of 300 points");
 
             //@ Update the current 'global' grading result
+
             $this->grading_result['result'] += $rule_grading_result['result'] ?? 0;
-            $log("Incremented the cumulative score by '{$rule_grading_result['result']}' points to a current total of '{$this->grading_result['result']}' of a possible 300.");
+            $log("Incremented the cumulative score by '{$rule_grading_result['result']}' to a current cumulative of '{$this->grading_result['result']}'.");
 
             //@ Add the grading result data to the global result 'items' store
             array_push($this->grading_result['items'], $rule_grading_result);
-            $log("Updated the rule grading 'items' reference.");
+            $log("Updated the 'grade result' rule grading 'items' reference.");
 
-            //@ HERE !!!
-
-            // $this->grading_result["logs"].=@"\n#{$active_rule['rule_id']}\t.";
+            $log("🔥🔥🔥🔥END OF RULE🔥🔥🔥🔥\n\n");
         }
+
+        $max_score = count($this->grading_result['items']) * 300;
 
         //@ Show a breakdown of the grading procedure
         echo $this->grading_result['logs'];
-        echo '\n\n\nTOTAL SCORE:\t';
-        echo $this->grading_result['result'];
-        echo '\n\n\n';
+        echo "\n\n\nTOTAL SCORE:\t".$this->grading_result['result'];
+        echo "\nPOSSIBLE SCORE:\t".$max_score;
+        echo "\n\nPERCENTAGE:\t".round((($this->grading_result['result'] / $max_score) * 100), 2, PHP_ROUND_HALF_UP);
+        echo "\n\n\nDONE\n";
         exit;
     }
 }
