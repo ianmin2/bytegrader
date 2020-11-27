@@ -481,11 +481,21 @@ $botched_array = json_encode([
     ],
 ]);
 
-    echo "\n\n";
-    // var_dump(doValueExtraction("token", $call_result_object ));
-    // print_r( gradeCallResultAssessor($call_result_array, $complex_open_nested_expected, []) );
-    print_r(computeCallResultAccuracy($grading_call_result = [], $grading_rule_combo = []));
+//     echo "\n\n";
+//     // var_dump(doValueExtraction("token", $call_result_object ));
+//     // print_r( gradeCallResultAssessor($call_result_array, $complex_open_nested_expected, []) );
+//     print_r(computeCallResultAccuracy($grading_call_result = [], $grading_rule_combo = []));
 
-//     $no_match_weight = "20";
+// //     $no_match_weight = "20";
 
-//    echo ((intval($no_match_weight)??50)/100);
+// //    echo ((intval($no_match_weight)??50)/100);
+
+
+// $grading_rule_php = json_decode($grading_rule_object,true);
+
+// $dta =  json_encode(array_walk_recursive ($grading_rule_php, function (&$a) {
+//     if (is_string ($a)) {
+//         $a = utf8_encode ($a);
+//     }
+//     return $a;
+// }));

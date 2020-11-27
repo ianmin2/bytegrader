@@ -53,6 +53,16 @@ class GradingWorker
 
     // ------------------------------------------------
 
+    public function safeJSONEncode($array)
+    {
+        // json_encode (array_walk_recursive ($array, function (&$a) {
+        //     if (is_string ($a)) {
+        //         $a = utf8_encode ($a);
+        //     }
+        // }));
+       return json_encode($array,JSON_FORCE_OBJECT);
+    }
+
     //@ check if is associative array
     private function isAssociativeArray(array $arr)
     {
@@ -663,13 +673,51 @@ class GradingWorker
 
         $max_score = count($this->grading_result['items']) * 300;
 
-        //@ Show a breakdown of the grading procedure
-        echo $this->grading_result['logs'];
-        echo "\n\n\nTOTAL SCORE:\t".$this->grading_result['result'];
-        echo "\nPOSSIBLE SCORE:\t".$max_score;
-        echo "\n\nPERCENTAGE:\t".round((($this->grading_result['result'] / $max_score) * 100), 2, PHP_ROUND_HALF_UP);
-        echo "\n\n\nDONE\n";
-        exit;
+        $update_date = date('Y-m-d H:i:s');
+
+        $attempt_grade = json_encode([
+            'total' => $this->grading_result['result'],
+            'possible' => $max_score,
+            'percentage' => round((($this->grading_result['result'] / $max_score) * 100), 2, PHP_ROUND_HALF_UP), ]);
+
+        // $attempt_grade_breakdown = json_encode($this->grading_result);
+        $attempt_grade_breakdown = $this->safeJSONEncode($this->grading_result);
+
+
+        // $attempt_grade_breakdown_link = __DIR__.'/grades/'.md5($attempt_grade_breakdown).'.txt';
+        // file_put_contents($attempt_grade_breakdown_link, $attempt_grade_breakdown);
+
+        // json_encode($this->grading_result)
+        //@ store the grading breakdown for the attempt
+        $query_string = 'UPDATE attempts 
+        SET attempt_grading_time=?, 
+        attempt_grade_breakdown=?,
+        attempt_grade=?, 
+        attempt_grade_complete=1,
+        updated_at=? 
+        WHERE 
+        attempt_id=? 
+        AND 
+        attempt_assignment=?';
+
+        $query_data = [
+            $update_date,
+            $attempt_grade_breakdown,
+            $attempt_grade,
+            $update_date,
+            $this->active_submission['attempt_id'],
+            $this->active_submission['attempt_assignment'],
+        ];
+
+        //@ Perform the actual update
+
+        $update_result = $this->c->con->prepare($query_string)->execute($query_data);
+
+        // $query = $this->c->aQuery($query_string, true, 'Graded', 'Failed to grade');
+        if ($query_string) {
+            print_r($update_result);
+        }
+        echo "\n\n\n";
     }
 }
 
