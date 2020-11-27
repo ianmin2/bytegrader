@@ -47,9 +47,54 @@ class GradingWorker
 
         //@ start the actual grading
         if (!$sampling) {
-            $this->doGrading();
+            return $this->doGrading();
         }
     }
+
+    // @ Handles the validation of rules prior to saving them
+    public function validateRules(){
+
+        // if(!is_array($this->active_grading_rules)){
+        //     echo gettype($this->active_grading_rules);
+        //     exit;
+        // }
+
+        //@ Loop through each rule, 
+        for ($idx=0; $idx < count($this->active_grading_rules); $idx++) { 
+            
+            $current_rule = $this->active_grading_rules[$idx];
+            $parent_rules = $current_rule['parent_rules'];
+
+            //@ Check if the parent rules are defined
+            if( is_array($parent_rules) )
+            {
+                //@ Ensure that all the parent rules have been cached already
+                for($i = 0; $i<count($parent_rules);$i++){
+
+                    $current_parent_rule = $parent_rules[$i];
+                    if(!$this->local_cache[$current_parent_rule]){
+                        $this->error_log .= "\nCould not find a local reference to the grading rule {$current_parent_rule} required by {$current_rule['rule_id']}\n\t Ensure that {$current_parent_rule} is defined before {$current_rule['rule_id']}\n";
+                    }
+                }
+                
+            }
+       
+            //@ Simulate rule execution
+            $this->local_cache[$current_rule["rule_id"]] = "placeholder";     
+
+
+
+        }
+
+        if($this->error_log != ""){
+
+            return $this->c->wrapResponse(400, $this->error_log, ["cache"=>$this->local_cache]);
+        }
+       
+        return false;
+
+    }
+
 
     // ------------------------------------------------
 
@@ -709,15 +754,11 @@ class GradingWorker
             $this->active_submission['attempt_assignment'],
         ];
 
-        //@ Perform the actual update
-
+        //@ Perform the actual database update
         $update_result = $this->c->con->prepare($query_string)->execute($query_data);
 
-        // $query = $this->c->aQuery($query_string, true, 'Graded', 'Failed to grade');
-        if ($query_string) {
-            print_r($update_result);
-        }
-        echo "\n\n\n";
+        return true;
+       
     }
 }
 

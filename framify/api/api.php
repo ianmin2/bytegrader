@@ -354,11 +354,39 @@ class DissertationAPI
         return $this->c->printQueryResults('SELECT * FROM attempts;', true, true);
     }
 
+    //@ Assignment submission
     public function addAttempt($attemptData)
     {
+        //@ Process the data into the accepted format
         $processed_values = $this->getFieldNamesAndValues($attemptData);
 
-        return $this->c->aQuery("INSERT INTO attempts {$processed_values['keys']} VALUES {$processed_values['values']}", true, 'Attempt registered.', 'Failed to record assignment attempt!');
+        //@ Capture the process insertion response
+        $insertion_response =  $this->c->aQuery("INSERT INTO attempts {$processed_values['keys']} VALUES {$processed_values['values']}", true, 'Attempt registered.', 'Failed to record assignment attempt!');
+        //@ Capture the last insert id
+        $last_attempt_id = $this->c->lastInsertId();
+        //@ Parse the response
+        $insertion_response = json_decode($insertion_response,true)?? $insertion_response;
+        
+        //@ If the record was inserted, proceed to grading
+        if($insertion_response["status"] == 200)
+        {
+            //@ Fetch the attempt_record
+            $submission_instance = $this->c->prepare("SELECT * FROM attempts WHERE attempt_id=?")->execute([$last_attempt_id]);
+
+            //@ Fetch the latest chained rule grading rules for the current assigment
+            $grading_rules = $this->c->prepare("SELECT TOP 1 chaining_rules FROM chainings WHERE chaining_assignment=? ORDER BY chaining_id DESC")->execute([$submission_instance["attempt_assignment"]]);
+
+            //@ Start a new instance of the grading object
+            //@ perform the actual grading
+            new GradingWorker($grading_rules['chaining_rules'], $submission_instance, $this->c);
+
+            //@ Give the submiter their response
+            return json_encode($insertion_response);
+
+        }
+        
+        //@ Give the error message
+        return json_encode($insertion_response);
     }
 
     public function updateAttempt($updateData)
@@ -749,7 +777,7 @@ class DissertationAPI
         try {
             return json_encode($dta);
         } catch (Throwable $th) {
-            return dta;
+            return $dta;
         }
     }
 }
