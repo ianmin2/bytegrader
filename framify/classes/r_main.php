@@ -20,7 +20,7 @@ header("Access-Control-Allow-Methods: *");
 header("Content-Type:application/json");
 error_reporting(@$_ENV["OUT_LOUD"] == "true" ? E_ALL : 0);
 
-date_default_timezone_set("Africa/Nairobi");
+date_default_timezone_set("UTC");
 
 //$this_site = "eleanor/concept"; 
 
