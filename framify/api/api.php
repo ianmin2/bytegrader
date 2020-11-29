@@ -349,9 +349,29 @@ class DissertationAPI
     //=============================================================================
     //# ATTEMPTS
     //=============================================================================
-    public function getAttempts()
+    public function getAttempts($attempt_assignment)
     {
-        return $this->c->printQueryResults('SELECT * FROM attempts;', true, true);
+
+        $extraquery = $attempt_assignment != NULL ? " WHERE attempt_assignment='{$attempt_assignment}'" : "";
+
+        $attempts_query = "SELECT 
+        ats.attempt_id, ats.attempt_assignment, ats.attempt_name, ats.attempt_student_identifier, ats.attempt_main_path, ats.attempt_submission_time,
+        ats.attempt_grading_time, ats.attempt_grade,
+         ats.attempt_grade_complete, ats.created_at, ats.updated_at,
+        ass.assignment_name, 
+        usr.id as assignment_owner_id, 
+        usr.email as rule_assignment_owner_email,
+        usr.name as assignment_owner_name
+        FROM attempts ats
+        JOIN assignments ass
+        ON
+            ass.assignment_id = ats.attempt_assignment 
+        JOIN users usr 
+        ON 
+            usr.id = ass.assignment_owner;
+        ".$extraquery;
+
+        return $this->c->printQueryResults($attempts_query, true, true);
     }
 
     //@ Assignment submission
@@ -360,25 +380,36 @@ class DissertationAPI
         //@ Process the data into the accepted format
         $processed_values = $this->getFieldNamesAndValues($attemptData);
 
+        $placeholder_values =  implode(',', array_fill(0, count($processed_values['raw_values']), '?'));
+
         //@ Capture the process insertion response
-        $insertion_response =  $this->c->aQuery("INSERT INTO attempts {$processed_values['keys']} VALUES {$processed_values['values']}", true, 'Attempt registered.', 'Failed to record assignment attempt!');
+        $insertion_response =  $this->c->apQuery("INSERT INTO attempts {$processed_values['keys']} VALUES ({$placeholder_values})", $processed_values['raw_values'], true, 'Attempt registered.', 'Failed to record assignment attempt!');
+                
         //@ Capture the last insert id
-        $last_attempt_id = $this->c->lastInsertId();
+        $last_attempt_id = $this->c->con->lastInsertId();
+
+       
+
         //@ Parse the response
         $insertion_response = json_decode($insertion_response,true)?? $insertion_response;
         
         //@ If the record was inserted, proceed to grading
-        if($insertion_response["status"] == 200)
+        if($insertion_response["response"] == 200)
         {
-            //@ Fetch the attempt_record
-            $submission_instance = $this->c->prepare("SELECT * FROM attempts WHERE attempt_id=?")->execute([$last_attempt_id]);
+            // // @ Fetch the attempt_record
+            $submission_instance = $this->c->printQueryResults("SELECT * FROM attempts WHERE attempt_id='{$last_attempt_id}'",true,false);
+            $submission_instance = @$submission_instance[0];
+           
 
             //@ Fetch the latest chained rule grading rules for the current assigment
-            $grading_rules = $this->c->prepare("SELECT TOP 1 chaining_rules FROM chainings WHERE chaining_assignment=? ORDER BY chaining_id DESC")->execute([$submission_instance["attempt_assignment"]]);
+            $grading_rules = $this->c->printQueryResults("SELECT TOP 1 chaining_rules FROM chainings WHERE chaining_assignment='{$submission_instance["attempt_assignment"]}' ORDER BY chaining_id DESC",true);
+            $grading_rules = @$grading_rules[0];
 
             //@ Start a new instance of the grading object
             //@ perform the actual grading
-            new GradingWorker($grading_rules['chaining_rules'], $submission_instance, $this->c);
+            $d  = new GradingWorker($grading_rules['chaining_rules'], $submission_instance, $this->c);
+            
+            
 
             //@ Give the submiter their response
             return json_encode($insertion_response);
@@ -415,6 +446,51 @@ class DissertationAPI
     // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ GENERAL @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
     //=============================================================================
 
+    //@ Handle assignment bulk grading
+    public function bulkGrading($identifier, $identifier_is_submission = false)
+    {
+
+       
+
+        if(!$identifier_is_submission )
+        {
+            //@ Fetch all attempts matching the  given assignment
+            $assignment_attempts =  $this->c->printQueryResults("SELECT * FROM attempts where attempt_assignment='{$identifier}'");
+
+             //@ Fetch an instance of the latest grading rules 
+            //@ Fetch the latest chained rule grading rules for the current assigment
+            $grading_rules = $this->c->printQueryResults("SELECT TOP 1 chaining_rules FROM chainings WHERE chaining_assignment='{$identifier}' ORDER BY chaining_id DESC",true);
+            $grading_rules = @$grading_rules[0];
+
+            //@ Loop through each submission/attempt instance while performing a grading
+            foreach ($assignment_attempts as $submission_instance) {
+                new GradingWorker($grading_rules['chaining_rules'], $submission_instance, $this->c);
+            }
+            
+        }
+        else
+        {
+             // // @ Fetch the attempt_record
+             $submission_instance = $this->c->printQueryResults("SELECT * FROM attempts WHERE attempt_id='{$identifier}'",true,false);
+             $submission_instance = @$submission_instance[0];
+            
+ 
+             //@ Fetch the latest chained rule grading rules for the current assigment
+             $grading_rules = $this->c->printQueryResults("SELECT TOP 1 chaining_rules FROM chainings WHERE chaining_assignment='{$submission_instance["attempt_assignment"]}' ORDER BY chaining_id DESC",true);
+             $grading_rules = @$grading_rules[0];
+ 
+             //@ Start a new instance of the grading object
+             //@ perform the actual grading
+            new GradingWorker($grading_rules['chaining_rules'], $submission_instance, $this->c);
+             
+        }
+
+
+        return $this->c->wrapResponse(200,'Grading initialized');
+
+    }
+
+    //@ Basic data sanitization
     public function sanitize($val)
     {
         $val = (preg_replace('/\;/i', ',', $val));
@@ -423,6 +499,7 @@ class DissertationAPI
         // return $this->sanitizeThoroughly($val);
     }
 
+    //@ Thorough data sanitization
     public function sanitizeThoroughly($val)
     {
         return  htmlspecialchars(preg_replace('/\;/i', ',', $val), ENT_QUOTES);

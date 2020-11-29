@@ -364,7 +364,7 @@ class GradingWorker
     //@!!!!!!!!!!!!!!!!!!!
 
     //@ Test the grading call against the non-parameter rule criteria
-    private function computeCallResultAccuracy($grading_call_result = [], $grading_rule_object = [])
+    private function computeCallResultAccuracy($grading_call_result = [], $grading_rule_object = [], $logger)
     {
         $grading_call_result = @json_decode($grading_call_result, true) ?? $grading_call_result;
         $grading_rule_object = @json_decode($grading_rule_object, true) ?? $grading_rule_object;
@@ -454,7 +454,7 @@ class GradingWorker
     //@ { $call_result_array, $complex_open_expected }
     //@ { call_result, expected_data }
     //@ convert the simple structures into a [ ["key" => "", "value" => ""] ] format
-    private function gradeCallResultAssessor($grading_call_result, $grading_rule_object)
+    private function gradeCallResultAssessor($grading_call_result, $grading_rule_object, $logger)
     {
         //@ Set the basic grading breakdown
         $grading_breakdown = [
@@ -468,7 +468,7 @@ class GradingWorker
 
         //@ Convert rule object to array
         $grading_rule_object = @json_decode($grading_rule_object, true) ?? $grading_rule_object;
-
+        
         //@ Ensure that the grading rule object is workable
         if (is_array($grading_rule_object)) {
             //@ Extract the expected_data from the current rule
@@ -476,6 +476,18 @@ class GradingWorker
 
             //@ Update the grading breakdown template with the expected data
             $grading_breakdown['template'] = $expected_data;
+
+
+            // $call_res = @json_decode($grading_call_result,true) ?? $grading_call_result;
+            //@ Ensure that the grading call result was not an error
+            if($grading_call_result["error"])
+            {
+                $grading_breakdown["grading"]["breakdown"] = 'The call triggered an error, no marks to assign';
+                $grading_breakdown['grading']['result'] = 0;
+                $logger("The call to the grading endpoint triggered an error, no marks can be warded for this");
+                return $grading_breakdown;
+            }
+
 
             //@ Setup an output template
             $output_data = [];
@@ -512,9 +524,11 @@ class GradingWorker
 
                 //@ Transform an array to output
                 $get_data_from_array = function ($parsed_array) use ($extract_value_from_call_result) {
-                    $points_per_match = 100 / count($parsed_array) ?? 1;
+                    $item_total = count($parsed_array) ?? 1;
+                    $points_per_match = 100 / $item_total;
                     $points_garnered = 0;
-                    $output_data = [];
+                    $output_data = [ "explanation" => "" ];
+                    $output_data['explanation'] = "Found {$item_total} expected items each worth {$points_per_match} points";
                     //@ Loop through each item and get its value
                     foreach ($parsed_array as $key => $value) {
                         if (@$value['key']) {
@@ -523,11 +537,13 @@ class GradingWorker
                             //@ if the data value exists, add a point to match
                             if ($output_data[$value['key']]) {
                                 $points_garnered += $points_per_match;
-                            }
+                                $output_data['explanation'] .= "\n\nAdded {$points_per_match} to the score for the existing key '{$value['key']}'\nResult: \t '".@json_encode($output_data[$value['key']])."'";
+                            }                           
                         } else {
                             $output_data[$key] = $extract_value_from_call_result($key);
                             if ($output_data[$key]) {
                                 $points_garnered += $points_per_match;
+                                $output_data['explanation'] .= "\n\nAdded {$points_per_match} to the score for the existing key '{$key}'\nResult: \t '".@json_encode($output_data[$key])."'";
                             }
                         }
                     }
@@ -557,7 +573,9 @@ class GradingWorker
                                 ? $points_per_item
                                 : $points_per_item * 0 //((intval($no_match_weight)??50)/100)
                             : (null == $formated_call_result[$key]) ? 0 : $points_per_item;
-                            $out['explanation'] .= "\n\nAdded {$new_points} to the score for matching the key '{$key}'\nResult: \texpected '".@json_encode($value)."' \tgot '".@json_encode($formated_call_result[$key])."'";
+                            $encoded_value = @json_encode($value);
+                            $encoded_value = ($encoded_value == "" || $encoded_value == NULL ) ? '<API RESULT>' : $encoded_value;
+                            $out['explanation'] .= "\n\nAdded {$new_points} to the score for matching the key '{$key}'\nResult: \texpected '".$encoded_value."' \tgot '".@json_encode($formated_call_result[$key])."'";
                         } else {
                             $out['explanation'] .= "\n\nNo points scored for the key '{$key}'\nResult: \texpected '".@json_encode($value)."'";
                         }
@@ -567,7 +585,6 @@ class GradingWorker
 
                     $out['explanation'] .= "\n\n{$cumulative_points} points scored for matching rules";
                     $out['result'] = round($cumulative_points, 2, PHP_ROUND_HALF_DOWN);
-
                     //@ give the judgement on the score
                     return $out;
                 };
@@ -608,7 +625,7 @@ class GradingWorker
             //@>>>>>>>>>>>>>>>>>>>>>>>>>>> RESPONSE_FORMAT (out of 200 points)
 
             //@ Go through each of the grading rules and check the general result's compliance (status_code,mime_type, ...)
-            $grading_breakdown['grading']['response_format'] = $this->computeCallResultAccuracy($grading_call_result, $grading_rule_object);
+            $grading_breakdown['grading']['response_format'] = $this->computeCallResultAccuracy($grading_call_result, $grading_rule_object, $logger);
 
             //@ Update the grading breakdown object result with the general rule adherance result
             $grading_breakdown['grading']['result'] += $grading_breakdown['grading']['response_format']['result'] ?? 0;
@@ -616,6 +633,9 @@ class GradingWorker
             //@ Add a reference to the actual call result [value]
             $grading_breakdown['actual'] = $output_data;
             $grading_breakdown['parsed'] = $extracted_arr ?? $parsed_expectations;
+
+            //@ Log the current grade result explanation
+            $logger(@$grading_breakdown['grading']['expected_data']["explanation"]);
         }
 
         //@ Attach the grading result to the final result
@@ -701,7 +721,7 @@ class GradingWorker
             $log('Updated the local_cache with the call response result.');
 
             //@ Pass to the grader for expectation matching and grading
-            $rule_grading_result = $this->gradeCallResultAssessor($attempt_response, $active_rule);
+            $rule_grading_result = $this->gradeCallResultAssessor($attempt_response, $active_rule, $log);
             $log("Received the rule grading result as {$rule_grading_result['result']}  of 300 points");
 
             //@ Update the current 'global' grading result

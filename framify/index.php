@@ -253,9 +253,9 @@ if (@$command) {
                     break;
 
                 case "attempts":
-                    echo $proc->getAttempts();
+                    echo ($_REQUEST['id'] == null) ? $proc->getAttempts(NULL) : $proc->getAttempts($_REQUEST["id"]);
                     exit;
-                    break;
+                break;
 
                 default:
                     echo "Nadaaaaaaaaa! {$table}";
@@ -308,9 +308,28 @@ if (@$command) {
             include (__DIR__."/sampler.php");
             echo json_encode(["tester" => "live", "path" => __DIR__."/sampler.php"]);
             exit;
-            $sampler = new Sampler();
+            $sampler = new Sampler($connection);
             $sampler->mockGrading();
         break;
+
+        case "grade":
+            // @ Chek if it's an individual grading attempt
+            $is_submission = ($_REQUEST["attempt_id"] != NULL) ? true : false;
+            
+            //@ Multi grading instance
+            if(!$is_submission)
+            {
+                //@ Ensure that an assignment Id is defined
+                if( !$_REQUEST["assignment_id"] ) die($connection->wrapResponse(500, 'Specify the instance to grade'));
+
+                echo $proc->bulkGrading($_REQUEST["assignment_id"]);
+            }
+            else{
+                echo $proc->bulkGrading($_REQUEST["attempt_id"],true);
+            }
+
+        break;
+
         default:
             echo $connection->wrapResponse(500, "The required parameters were not met. Please ensure that they are defined");
             exit;

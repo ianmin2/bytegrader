@@ -19,7 +19,7 @@ include(__DIR__."/classes/r_main.php");
 unset($_REQUEST["password2"]);
 
 //ADD FILTERS TO PREVENT PIGGYBACKING ON ALL PARAMS
-$secure = ["add", "del", "update", "truncate", "drop", "getAll", "custom"]; //"auth",
+$secure = ["add", "del", "update", "truncate", "drop", "getAll", "custom", 'grade','mock']; //"auth",
 // $secure = [];
 
 $errMsg = $connection->wrapResponse(500, "Could not verify your access level to perform this task!<br>Please login to continue.");

@@ -168,6 +168,21 @@ class connection
     }
 
     /** 
+     * THE PREPARED QUERY PERFORMER 
+     * */
+    public final function preparedQuery($statement, $values = [], $stops = false)
+    {
+
+        /* 
+    	 * Execute the query then fetch the returned associateive array for all values 
+    	 * */
+        // echo "Running the query `{$statement}`\n\n";
+        $qs = $this->con->prepare($statement);
+        $query = $qs->execute($values) or $this->die_on_error($stops, $statement);
+        return $query;
+    }
+
+    /** 
      * THE BASIC MULTI QUERY PERFORMER 
      * */
     public final function mQuery($statement, $stops = false)
@@ -193,6 +208,44 @@ class connection
     	 * Do a basic query 
     	 * */
         $query = $this->query($statement, $stops);
+
+
+        /* 
+    	 * If the query is successfull 
+    	 * */
+        if ($query) :
+
+            /* 
+    		 * Model and return a success message 
+    		 * */
+            return $this->wrap($this->makeResponse(200, $success, $scommand));
+
+        /* 
+    	 * If the query is not successfull 
+    	 */
+        else :
+
+            /* 
+    		 * Model and return a failure message 
+    		 */
+            return $this->wrap($this->makeResponse(500, $failure, $fcommand));
+
+        endif;
+    }
+
+
+    /** 
+     * THE ADVANCED PREPARED QUERY  
+     * { basic query with pre-defined conditional results }   
+     * [ ideal for inserts, updates, and deletion  ]
+     * */
+    public final function apQuery($statement, $values, $stops = false, $success, $failure, $scommand = '', $fcommand = '')
+    {
+
+        /* 
+    	 * Do a basic query 
+    	 * */
+        $query = $this->preparedQuery($statement, $values, $stops);
 
 
         /* 
