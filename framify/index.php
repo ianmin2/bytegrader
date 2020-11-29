@@ -256,6 +256,10 @@ if (@$command) {
                     echo ($_REQUEST['id'] == null) ? $proc->getAttempts(NULL) : $proc->getAttempts($_REQUEST["id"]);
                     exit;
                 break;
+                case "gradereport":
+                    echo ($_REQUEST['technical'] != null) ? $proc->getGradingSummary($_REQUEST['attempt_id'], true) : $proc->getGradingSummary($_REQUEST['attempt_id']);
+                    exit;
+
 
                 default:
                     echo "Nadaaaaaaaaa! {$table}";

@@ -743,11 +743,16 @@ class GradingWorker
         $attempt_grade = json_encode([
             'total' => $this->grading_result['result'],
             'possible' => $max_score,
-            'percentage' => round((($this->grading_result['result'] / $max_score) * 100), 2, PHP_ROUND_HALF_UP), ]);
+            'percentage' => round((($this->grading_result['result'] / ($max_score??1)) * 100), 2, PHP_ROUND_HALF_UP), ]);
+        
+
+        //@ Keep the grading log up to date
+        $this->grading_result['logs'] .= "\n\n===============================================================================\n\n";
+        $this->grading_result['logs'] .= "\tTOTAL: \t{$this->grading_result['result']}\n\tPOSSIBLE: \t{$max_score}\n\tPERCENTAGE: \t".round((($this->grading_result['result'] / ($max_score ?? 1)) * 100), 2, PHP_ROUND_HALF_UP)."(%)";
+        $this->grading_result['logs'] .= "\n\n===============================================================================\n\n";
 
         // $attempt_grade_breakdown = json_encode($this->grading_result);
         $attempt_grade_breakdown = $this->safeJSONEncode($this->grading_result);
-
 
         // $attempt_grade_breakdown_link = __DIR__.'/grades/'.md5($attempt_grade_breakdown).'.txt';
         // file_put_contents($attempt_grade_breakdown_link, $attempt_grade_breakdown);

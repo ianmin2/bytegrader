@@ -352,7 +352,7 @@ class DissertationAPI
     public function getAttempts($attempt_assignment)
     {
 
-        $extraquery = $attempt_assignment != NULL ? " WHERE attempt_assignment='{$attempt_assignment}'" : "";
+        $extraquery = $attempt_assignment != NULL ? " WHERE attempt_assignment='{$attempt_assignment}';" : ";";
 
         $attempts_query = "SELECT 
         ats.attempt_id, ats.attempt_assignment, ats.attempt_name, ats.attempt_student_identifier, ats.attempt_main_path, ats.attempt_submission_time,
@@ -368,7 +368,7 @@ class DissertationAPI
             ass.assignment_id = ats.attempt_assignment 
         JOIN users usr 
         ON 
-            usr.id = ass.assignment_owner;
+            usr.id = ass.assignment_owner
         ".$extraquery;
 
         return $this->c->printQueryResults($attempts_query, true, true);
@@ -440,6 +440,49 @@ class DissertationAPI
         }
         //@ Ask the requesting user[s] to improve themselves
         return $this->c->wrapResponse(401, 'No such assignment attempt exists!');
+    }
+
+
+    public function getGradingSummary($attemptId, $isTechnical = false) {
+
+        if($attemptId)
+        {
+              //@ Fetch the attempt grade breakdown
+            $queryString = "
+            select  attempt_grade_breakdown from attempts
+            WHERE attempt_id={$attemptId};
+            ";
+
+            $attemptData = $this->c->printQueryResults($queryString,true);            
+            $attemptData = @$attemptData[0]["attempt_grade_breakdown"];
+            $attemptData = json_decode($attemptData, true);
+            
+            if($attemptData == null) die("NO SUCH RECORD");
+
+            //@ Technical users get a json_response
+            if($isTechnical){
+            
+                header("Content-Disposition: attachment; filename=detailed_grading_attempt_{$attemptId}.json");
+                return json_encode($attemptData);            
+
+            }
+            else 
+            {
+                //@ Generate a simple html/text page? 
+                header("Content-Type: text/html;");
+                // header("Content-Disposition: attachment; filename=grading_attempt_{$attemptId}.html");
+                $html_data =  str_replace( "\n", "<br>",  $attemptData['logs']);
+                $html_data = str_replace("\t","&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;",$html_data);
+                return $html_data;
+            }
+
+        }
+        else{
+            return  "Invalid request";
+        }
+      
+        
+
     }
 
     //=============================================================================
