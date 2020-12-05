@@ -22,7 +22,7 @@ unset($_REQUEST["password2"]);
 $secure = ["add", "del", "update", "truncate", "drop", "getAll", "custom", 'grade','mock']; //"auth",
 // $secure = [];
 
-$errMsg = $connection->wrapResponse(500, "Could not verify your access level to perform this task!<br>Please login to continue.");
+$errMsg = $connection->wrapResponse(500, "Could not verify your access level to perform this task!\n\nPlease login to continue.", getallheaders());
 
 //! HANDLE *** IF THE SPECIFIED COMMAND REQUIRES EXTRA AUTHENTICATION
 //@ Add a concession for user registration
@@ -32,13 +32,13 @@ if (in_array(@$_REQUEST['command'], $secure)  && !($_REQUEST['command'] == "add"
 	$headers = getallheaders();
 
 	//! ENSURE THAT THE AUTHENTICATION TOKEN HAS BEEN PROVIDED
-	if (!$headers["Authorization"]) die($errMsg);
+	if (!$headers["Grader-Authorization"]) die($errMsg);
 
 
-	$headers["Authorization"] = preg_replace('/^Bearer\s|\sBearer\s/i', '', $headers["Authorization"]);
+	$headers["Grader-Authorization"] = preg_replace('/^Bearer\s|\sBearer\s/i', '', $headers["Grader-Authorization"]);
 
 	//! ENSURE THAT THE AUTHENTICATION TOKEN IS AUTHENTIC
-	if ($GLOBALS["jwt"]->decode($headers["Authorization"])["response"] != 200) die($errMsg);
+	if ($GLOBALS["jwt"]->decode($headers["Grader-Authorization"])["response"] != 200) die($errMsg);
 
 	//! LOG ALL 'AUTHENTICATION REQUIRED' REQUESTS 
 	file_put_contents(__DIR__ . "/.authorized_requests.log", "\n" . date('l F j Y h:i:s A') . "\t" . json_encode(["request" => $_REQUEST, "headers" => $headers]), FILE_APPEND);
