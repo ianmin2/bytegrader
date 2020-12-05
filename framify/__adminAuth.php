@@ -22,7 +22,7 @@ unset($_REQUEST["password2"]);
 $secure = ["add", "del", "update", "truncate", "drop", "getAll", "custom", 'grade','mock']; //"auth",
 // $secure = [];
 
-$errMsg = $connection->wrapResponse(500, "Could not verify your access level to perform this task!\n\nPlease login to continue.", getallheaders());
+$errMsg = $connection->wrapResponse(500, "Could not verify your access level to perform this task!\n\nPlease login to continue.");
 
 //! HANDLE *** IF THE SPECIFIED COMMAND REQUIRES EXTRA AUTHENTICATION
 //@ Add a concession for user registration
