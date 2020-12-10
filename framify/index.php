@@ -10,8 +10,11 @@ require __DIR__."/vendor/autoload.php";
 //@ LOAD ENVIRONMENT VARIABLES 
 use Symfony\Component\Dotenv\Dotenv;
 
-$dotenv = new Dotenv();
-$dotenv->load(__DIR__ . '/.env');
+if(@$_ENV["DOCKER"]!='true')
+{
+    $dotenv = new Dotenv();
+    $dotenv->load(__DIR__ . '/.env');
+}
 
 
 //@ LOAD THE JWT HELPER 

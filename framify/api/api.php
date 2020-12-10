@@ -811,23 +811,22 @@ class DissertationAPI
         $field_indexer = [];
 
         foreach ($fieldsData as $key => $value) {
-            if (null != $value) {
+            if (null != $value && null != $key) {
                 array_push($keys, $key);
                 array_push($values, $value);
 
+                $current_val = null;
+
                 $current_key = $this->sanitize($key).',';
-                $current_val = ('password' == $key)
-                    ?
-                    "'{$value}'"
-                    : ('updated_at' == $key || 'assignment_last_modified' == $key)
-                    ?
-                    'getdate()'
-                    :
-                    "'".$this->sanitize(is_array($value)
-                        ?
-                        json_encode($value)
-                        :
-                        $value)."',";
+
+                if ('password' == $key) $current_val = "'{$value}'";
+                   
+                    
+                if ('updated_at' == $key || 'assignment_last_modified' == $key) $current_val = 'getdate()';
+                
+
+                if($current_val == null) $current_val = "'".$this->sanitize(is_array($value) ? json_encode($value) : $value)."',";
+                       
 
                 if ($returnUpdateString) {
                     $updateString .= " {$this->sanitize($key)}={$current_val}";
